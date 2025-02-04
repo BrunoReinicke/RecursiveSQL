@@ -61,7 +61,7 @@ AS (SELECT ID
             ELSE
                 POS_AUX
             END 
-         AS POSX_AUX
+         AS POS_AUX
          
         ,ORIGINAL
         ,CHANGED       

@@ -17,7 +17,7 @@ AS (SELECT ID
         ,SUBSTR(SENHA, 1, 1) CHAR_ATUAL
         ,2 POSICAO
         ,LENGTH(SENHA) POS_AUX
-        ,'!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\\' ORIGINAL 
+        ,'!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\' ORIGINAL 
         ,'Üúùø÷öõôóòñðïîíìëêéèçæåäãâáàßÞÝÛÚÙØ×ÖÕÔÓÒÑÐÏÎÍÌËÊÉÈÇÆÅÄÃÂÁÀ¿¾½¼»º¹¸·¶µ´³²±°¯®­¬«ª©¨§¦¥¤£¡' CHANGED
     FROM Usuario_A
     

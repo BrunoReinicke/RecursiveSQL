@@ -8,21 +8,16 @@ AS (SELECT ROWNUM AS LINHA,
           FROM DUAL)
     CONNECT BY LEVEL <= LENGTH(CHANGED)
 )
-,VW_GcdAuxiliar
-AS (SELECT MAX(LINHA) LINHA
+,VW_Gcd
+AS (SELECT LINHA
+        ,MOD(LENGTH(CHANGED), MOD(LINHA, LENGTH(CHANGED))) GCD
     FROM VW_Auxiliar
-    WHERE MOD(LINHA, LENGTH(CHANGED)) <> 0
-)
-,VW_GetGcd
-AS (SELECT AA.LINHA, MOD(AA.LINHA, LENGTH(AA.CHANGED)) GCD
-    FROM VW_Auxiliar AA
-    INNER JOIN VW_GcdAuxiliar AUX ON AUX.LINHA = AA.LINHA
-    WHERE MOD(AA.LINHA, LENGTH(AA.CHANGED)) <> 0
 )
 ,VW_GetCoprimo
-AS (SELECT LINHA
-    FROM VW_GetGcd AA
-    WHERE AA.GCD = 1
+AS (SELECT AA.LINHA
+        ,MOD(AA.LINHA, (SELECT BB.GCD FROM VW_Gcd BB WHERE BB.LINHA = AA.LINHA)) COPR
+    FROM VW_AUXILIAR AA 
+    WHERE MOD(AA.LINHA, (SELECT BB.GCD FROM VW_Gcd BB WHERE BB.LINHA = AA.LINHA)) = 1
 )
 ,VW_Criptografia(id
                ,senha
@@ -47,7 +42,9 @@ AS (SELECT LINHA
                ,cont_blocos
                ,determinante
                ,teste
-               ,matr_coprimo) 
+               ,matr_coprimo
+               ,gcd
+               ,cofatores) 
 AS (SELECT AA.ID
         ,AA.SENHA
         ,'' CRYPT
@@ -62,7 +59,8 @@ AS (SELECT AA.ID
         ,1 COPRIMO
         ,'18,11,12;13,14,15;2,16,17' MATRIZ
         ,'19,12,13;14,15,16;3,17,18' RESERVA
-        ,'18,11,12;13,14,15;2,16,17' AUXILIAR
+       -- ,'18,11,12;13,14,15;2,16,17' AUXILIAR
+        ,'' AUXILIAR
         ,'18,11,12;13,14,15;2,16,17' ANTERIOR
         ,0 CONTADOR
         ,0 VIRGULA
@@ -72,6 +70,8 @@ AS (SELECT AA.ID
         ,0 DETERMINANTE
         ,0 TESTE
         ,'' MATR_COPRIMO
+        ,0 GCD
+        ,'' COFATORES
     FROM Usuario AA
     
     UNION ALL 
@@ -150,40 +150,58 @@ AS (SELECT AA.ID
             END 
          AS BLOCO
          
-         ,CASE
-             WHEN (COPRIMO < (SELECT MAX(LINHA) FROM VW_GetCoprimo WHERE LINHA >= COPRIMO)) THEN
-                (SELECT MAX(LINHA) FROM VW_GetCoprimo WHERE LINHA >= COPRIMO)
+         ,/*CASE    
+            WHEN (AUX_BLOCO is not null) THEN 
+                CASE
+                    WHEN (COPRIMO < (SELECT MAX(AA.LINHA) FROM VW_GetCoprimo AA WHERE AA.LINHA > COPRIMO)) THEN    
+                        (SELECT MIN(AA.LINHA) FROM VW_GetCoprimo AA WHERE AA.LINHA > COPRIMO)
+                    ELSE
+                        COPRIMO + 1
+                END
+            ELSE
+                COPRIMO 
+            END
+          AS*/ 
+          CASE    
+             WHEN (AUX_BLOCO is not null) THEN
+                CASE
+                    WHEN (COPRIMO < (SELECT MAX(AA.LINHA) FROM VW_GetCoprimo AA)) THEN
+                        (SELECT MIN(AA.LINHA) FROM VW_GetCoprimo AA WHERE AA.LINHA > COPRIMO)
+                    ELSE
+                        1
+                END
              ELSE
-                1
-             END
+                COPRIMO
+             END 
           AS COPRIMO
-          
+                
          ,MATRIZ
          ,RESERVA
          
-         ,/*CASE
-            WHEN (CONTADOR = 3) THEN
-                MATRIZ
-            WHEN (CONTADOR = 2) THEN
-                MATRIZ
+         
+         ,CASE
+            WHEN (LENGTH(AUX_BLOCO) >= LENGTH(SENHA)) AND (MOD(LENGTH(AUX_BLOCO),3) = 0) THEN   
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75)) || ';' ||
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75)) || ';' ||
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+                 CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75))
             ELSE
-                MATRIZ 
-          END*/
+                MATRIZ
+            END 
+          AS AUXILIAR
          
-        /*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3) || ';' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) || ';' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) || ',' ||
-          REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3)*/
-          
-          MATRIZ
-          AUXILIAR
-         
-         ,AUXILIAR ANTERIOR
+         ,/*CASE
+            WHEN (LENGTH(AUX_BLOCO) >= LENGTH(SENHA)) AND (MOD(LENGTH(AUX_BLOCO),3) = 0) THEN 
+                AUXILIAR
+            ELSE
+                ''
+            END 
+          AS*/ AUXILIAR ANTERIOR
          
          ,CASE
             WHEN (CONTADOR = 3) THEN
@@ -252,12 +270,12 @@ AS (SELECT AA.ID
                 (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
                 *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
                 -  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)  
-                *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))/*
+                *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))
          + REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3) * 
                 (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
                 *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2)  
                 -  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2)  
-                *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))*/ DETERMINANTE
+                *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1)) DETERMINANTE
         
         ,(SELECT 
               MIN(CASE 
@@ -313,10 +331,96 @@ AS (SELECT AA.ID
                 END > 0                  
        ) TESTE
         
-       , CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) MATR_COPRIMO
+       , /*CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75)) || ';' ||
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75)) || ';' ||
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' ||
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2) AS INT) * COPRIMO) AS VARCHAR(75)) || ',' || 
+         CAST((CAST(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) AS INT) * COPRIMO) AS VARCHAR(75))*/
+          '' AS MATR_COPRIMO
+
+        ,/*CASE
+            WHEN (LENGTH(AUX_BLOCO) >= LENGTH(SENHA)) AND (MOD(LENGTH(AUX_BLOCO),3) = 0) THEN 
+                (SELECT MIN(MOD(AA.LINHA, LENGTH(CHANGED)))--MOD(AA.LINHA, LENGTH(CHANGED)) GCD, AA.LINHA, AA.DETERMINANTE  
+				FROM 
+					(SELECT ROWNUM AS LINHA,
+						   DETERMINANTE
+					 FROM (SELECT ROWNUM AS LINHA,
+								  (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) * 1* 
+											(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) 
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3)  
+											-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)  
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2))
+									 - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) * 
+											(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
+											-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)  
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))
+									 + REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3) * 
+											(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2)  
+											-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2)  
+											*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))) DETERMINANTE
+						   FROM DUAL)
+					 CONNECT BY LEVEL <= (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 1) * 1* 
+												(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) 
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3)  
+												-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)  
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2))
+										 - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) * 
+												(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
+												-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)  
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))
+										 + REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3) * 
+												(REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1)  
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2)  
+												-  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2)  
+												*  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1)))
+					) AA
+                )
+            ELSE
+                0
+            END 
+         AS*/ 0 GCD
+        
+        ,/*CASE 
+             WHEN (BLOCO_ATUAL IS NOT NULL) THEN
+                CAST(
+                    (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2) 
+                    * REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
+                    - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 3)
+                    *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2))
+                AS VARCHAR(75)) || ',' ||
+                CAST(
+                    (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1) 
+                    * REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
+                    - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3)
+                    *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))
+                    * -1
+                AS VARCHAR(75)) || ',' ||     
+                CAST(
+                    (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 1) 
+                    * REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2) 
+                    - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 2), '[^,]+', 1, 2)
+                    *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 1))
+                AS VARCHAR(75)) || ';' ||
+                CAST(
+                    (REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 2) 
+                    * REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 3) 
+                    - REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 1), '[^,]+', 1, 3)
+                    *  REGEXP_SUBSTR(REGEXP_SUBSTR(AUXILIAR, '[^;]+', 1, 3), '[^,]+', 1, 2))
+                AS VARCHAR(75))
+            ELSE
+                ''
+            END 
+          AS*/ '' COFATORES
        
     FROM VW_Criptografia
-    WHERE POSICAO <= (LENGTH(SENHA) * 8) 
+    WHERE POSICAO <= (LENGTH(SENHA) * 8) + 7
 )
 SELECT ENCRYPTED
     ,BLOCO_ATUAL
@@ -331,6 +435,9 @@ SELECT ENCRYPTED
     ,DETERMINANTE
     ,TESTE
     ,MATR_COPRIMO
+    ,COFATORES
+    ,COPRIMO
+    ,GCD
 FROM VW_CRIPTOGRAFIA
 --WHERE LENGTH(ENCRYPTED) = LENGTH(SENHA)
 ORDER BY ID, POSICAO

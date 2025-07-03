@@ -54,7 +54,7 @@ VW_Criptografia AS (
         CAST('' AS CHAR(85)) AS AUX_BLOCO,
         CAST('' AS CHAR(85)) AS BLOCO_ATUAL,
         1 AS CONT_BLOCOS,
-        0 AS DETERMINANTE,
+        CAST('' as CHAR(85)) AS DETERMINANTE,
         '18,11,12;13,14,15;2,16,17' AS MATR_COPRIMO,
         0 AS GCD,
         0 AS DIVIDENDO,
@@ -115,8 +115,11 @@ VW_Criptografia AS (
         SUBSTRING(C.SENHA, C.POSICAO, 1) AS CHAR_ATUAL,
         C.POSICAO + 1,
         
-        CASE when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) 
-        	>= LENGTH(C.SENHA)) THEN 
+        CASE 
+	        when (C.POS_AUX = -1) then 
+             	0
+	        when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) 
+        	  >= LENGTH(C.SENHA)) THEN 
                 C.POS_AUX - 1
             ELSE
                 C.POS_AUX
@@ -125,11 +128,12 @@ VW_Criptografia AS (
         C.ORIGINAL,
         C.CHANGED,
         
-        CASE when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) 
+       CASE when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) 
         	= LENGTH(C.SENHA)) then
         	CASE
-                WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = (cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) ) THEN
-                   CASE 
+                WHEN ((/*(LENGTH(C.BLOCO) -*/ LENGTH(REPLACE(C.BLOCO, ',', '')) = (cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) 
+                    and (C.BLOCO is not NULL)) THEN
+                	CASE 
                         WHEN MOD(LENGTH(C.SENHA), 3) = 0 THEN 
                            CONCAT(C.BLOCO, ';')
                         WHEN MOD(LENGTH(C.SENHA), 2) = 0 THEN
@@ -142,12 +146,22 @@ VW_Criptografia AS (
                		AND (C.BLOCO IS NULL) THEN
                        CONCAT(C.BLOCO, (INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, 1, 1)) - 1), ',')
                 WHEN ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) = LENGTH(C.SENHA)) 
-                	AND (C.BLOCO IS NOT NULL) THEN   
-                       CONCAT(C.BLOCO, (INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, C.POSICAO - (LENGTH(C.SENHA) * 2 + 2), 1)) - 1))
+                	AND (C.BLOCO IS NOT NULL) THEN 
+                		case 
+                			when ((INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, C.POSICAO - (LENGTH(C.SENHA) * 2 + 2), 1))) > 0) then 
+                			    CONCAT(C.BLOCO, (INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, C.POSICAO - (LENGTH(C.SENHA) * 2 + 2), 1)) - 1))
+                			else 
+                				C.BLOCO
+                		end
                 END
-            ELSE
-                (cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))
-        END as BLOCO,
+            else
+            	case
+            		when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) <> 0) then 
+            			(cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))
+            		else 
+            			C.BLOCO
+            	end
+         END as BLOCO,
 
        /* CASE
              WHEN ((MOD(DIVIDENDO, DIVISOR) = 0) AND (RESTO <> 1)) 
@@ -167,15 +181,94 @@ VW_Criptografia AS (
         CAST('' AS CHAR(85)) AS AUX_BLOCO,
         CAST('' AS CHAR(85)) AS BLOCO_ATUAL,
         0 AS CONT_BLOCOS,
-        C.DETERMINANTE,
+        
+        -- SUBSTRING(@matriz, 1, CHARINDEX(';', @matriz) - 1)
+        -- matriz[1][1] * matriz[2][2] - matriz[1][2] * matriz[2][1]
+		
+        	/*LOCATE(',',
+	     			substring(C.AUXILIAR, 
+	     		      LOCATE(';', C.AUXILIAR) + 1,
+	     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+	     		    ,length(C.AUXILIAR) - LOCATE(';', C.AUXILIAR)) 
+        	CONCAT(SUBSTRING(
+				        substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     	,LOCATE(',',
+				     			substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     		    ,1) 
+				     		    + 1),
+	        	 CAST(SUBSTRING(
+				        substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     	,LOCATE(',',
+				     			substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     		    ,1) 
+				     		    + 1)
+					 as unsigned)  *
+			        	cast(
+				        	SUBSTRING(SUBSTRING(
+									        substring(C.AUXILIAR, 
+									     		      LOCATE(';', C.AUXILIAR) + 1,
+									     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+									     	,LOCATE(',',
+									     			substring(C.AUXILIAR, 
+									     		      LOCATE(';', C.AUXILIAR) + 1,
+									     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+									     		    ,1) 
+									     		    + 1)
+									   ,1
+						        	   ,LOCATE(','
+											   ,SUBSTRING(
+											        substring(C.AUXILIAR, 
+											     		      LOCATE(';', C.AUXILIAR) + 1,
+											     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+											     	,LOCATE(',',
+											     			substring(C.AUXILIAR, 
+											     		      LOCATE(';', C.AUXILIAR) + 1,
+											     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+											     		    ,1)
+											     		   ) + 1
+											   )
+										)
+								as unsigned) 
+							)
+						) */
+        			SUBSTRING(
+				        substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     	,LOCATE(',',
+				     			substring(C.AUXILIAR, 
+				     		      LOCATE(';', C.AUXILIAR) + 1,
+				     		      (LOCATE(';', C.AUXILIAR) + 1) - 2)
+				     		    ,1) 
+				     		    + 1)
+        				DETERMINANTE,        
+        		  
         C.MATR_COPRIMO,
         C.GCD,
-        C.DIVIDENDO,
-        C.DIVISOR,
-        C.RESTO
+        
+        case 
+        	when (C.DIVIDENDO = 0) then 
+        		(LOCATE(C.CHAR_ATUAL,C.ORIGINAL) - 1)
+        	else 
+        		RESTO
+            end 
+        as DIVIDENDO,
+        
+        cast((length(C.CHANGED) / 2) as unsigned) DIVISOR,
+        
+        mod((LOCATE(C.CHAR_ATUAL,C.ORIGINAL) - 1), cast((length(C.CHANGED) / 2) as unsigned)) RESTO
+        
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 5) 
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 7) 
 )
 SELECT * 
 FROM VW_Criptografia;

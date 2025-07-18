@@ -137,8 +137,127 @@ VW_Criptografia AS (
         C.ORIGINAL,
         C.CHANGED,
         
-       CASE when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) 
-        	= LENGTH(C.SENHA)) then
+        
+       CASE when (right(C.BLOCO, 1) = ';')
+       		and ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) = LENGTH(C.SENHA)) then
+       		   CONCAT(
+	       		  SUBSTRING(
+		       	    C.CHANGED
+	       			,mod(
+		       		   mod(
+			       		(CAST(	 
+			       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1),',',1)
+			       		 as unsigned) *
+			       		 CAST(
+				       		SUBSTRING_INDEX(
+				       			SUBSTRING_INDEX(C.AUXILIAR, ';', 1)
+				       			,','
+				       			,1
+				       		)
+				       	 as unsigned)
+					    ) +
+					       	
+			       		(CAST(SUBSTRING_INDEX(	 
+				       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1),',',2)
+				       			,','
+				       			,-1
+				       		)
+			       		as unsigned) *
+			       		 CAST(
+			       		 	SUBSTRING_INDEX(
+					       		SUBSTRING_INDEX(
+					       			SUBSTRING_INDEX(C.AUXILIAR, ';', 1)
+					       			,','
+					       			,2
+					       		)
+					       		,','
+					       		,-1
+				       		)
+				       	 as unsigned)
+				       	 ) +
+				       	 
+				       	 (CAST(SUBSTRING_INDEX(	 
+				       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1),',',2)
+				       			,','
+				       			,-1
+				       		)
+				       		as unsigned) *
+				       		 CAST(
+				       		 	SUBSTRING_INDEX(
+						       		SUBSTRING_INDEX(
+						       			SUBSTRING_INDEX(C.AUXILIAR, ';', 1)
+						       			,','
+						       			,2
+						       		)
+						       		,','
+						       		,-1
+					       		)
+					       	 as unsigned)
+					      )
+					    ,cast((length(C.CHANGED) / 2) as unsigned)) +
+					     cast((length(C.CHANGED) / 2) as unsigned)
+					    ,cast((length(C.CHANGED) / 2) as unsigned))
+					    ,1
+					  ),
+			--	SUBSTRING(
+					-- MOD(
+					--    MOD(
+						  (CAST(	 
+					       		SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';',  1), ',', 1)
+					       	as unsigned)
+					      )
+					 )/* *
+				       		 CAST(
+				       		 	SUBSTRING_INDEX(
+					       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1)
+					       			,','
+					       			,1
+					       		)
+					       	 as unsigned)*/ /*+
+						       	 
+						     CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';',  1), ',', 2), ',', -1) as unsigned) *
+					       		CAST(
+					       		    SUBSTRING_INDEX(
+						       		 	SUBSTRING_INDEX(
+							       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1)
+							       			,','
+							       			,2
+							       		)
+							       	,','
+							       	,-1)
+						     as UNSIGNED) +
+						     
+						     CAST(SUBSTRING_INDEX(	 
+				       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1),',',2)
+				       			,','
+				       			,-1
+				       		 )
+				       		 as unsigned) *
+				       		 CAST(
+				       		 	SUBSTRING_INDEX(
+					       			SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1)
+					       			,','
+					       			,-1
+					       		)
+					       	 as unsigned)       */
+						  -- )
+						  /* ,cast((length(C.CHANGED) / 2) as unsigned)) +
+						    cast((length(C.CHANGED) / 2) as unsigned)*/
+					--	)
+						  /* ,cast((length(C.CHANGED) / 2) as unsigned)
+					   		)*/
+					   		-- ,1
+						-- )
+				/*,''(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';',  1), ',', 1) as unsigned) *
+				  CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as unsigned)
+				 ) +
+				 CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';',  1), ',', 2), ',', -1) as unsigned)*
+				 CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), -1) as unsigned)
+		       )*/
+			    
+     
+	       	when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) 
+        		= LENGTH(C.SENHA)) then
         	CASE
                 WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')) = (cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) 
                     and (C.BLOCO is not NULL)) THEN

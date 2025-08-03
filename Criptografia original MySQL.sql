@@ -39,7 +39,7 @@ VW_Criptografia AS (
         CAST('' AS CHAR(85)) AS CRYPT,
         CAST('' AS CHAR(85)) AS DIV_CRYPT,
         CAST('' AS CHAR(85)) AS ENCRYPTED,
-        SUBSTRING(AA.SENHA, 1, 1) AS CHAR_ATUAL,
+        CAST('' as CHAR(85)) AS CHAR_ATUAL,
         1 AS POSICAO,
         LENGTH(AA.SENHA) AS POS_AUX,
         '!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\Б' AS ORIGINAL,
@@ -70,8 +70,9 @@ VW_Criptografia AS (
         C.ID,
         C.SENHA,
         
-        CASE 
-            WHEN (LENGTH(C.CRYPT) < LENGTH(C.SENHA)) THEN
+        /*CASE 
+            when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) 
+			   < LENGTH(C.SENHA)) THEN
                 CONCAT(
                     C.CRYPT,
                     SUBSTRING(
@@ -81,10 +82,25 @@ VW_Criptografia AS (
                     )
                 )
             ELSE
-                C.CRYPT
-        END AS CRYPT,
+                '2'-- C.CRYPT
+        END*/ 
+        case 
+        	when (C.CHAR_ATUAL <> '') 
+        	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) < LENGTH(C.SENHA)) then 
+        		CONCAT(
+                    C.CRYPT,
+                    SUBSTRING(
+                        C.CHANGED,
+                        CAST(MOD(18 * (LOCATE(C.CHAR_ATUAL,C.ORIGINAL) - 1) + 20, ((LENGTH(C.CHANGED) / 2) - 1)) AS UNSIGNED) + 1,
+                        1
+                    )
+                )
+        	else
+        		C.CRYPT
+        	end
+        as CRYPT,
         
-        CASE WHEN MOD(LENGTH(C.SENHA), 2) <> 0 THEN
+      /*  CASE WHEN MOD(LENGTH(C.SENHA), 2) <> 0 THEN
             CONCAT(
                 SUBSTRING(
                     C.CRYPT, 
@@ -103,7 +119,7 @@ VW_Criptografia AS (
                 ),
                 SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2))
             )
-        END AS DIV_CRYPT,
+        END AS*/ '' DIV_CRYPT,
          
         case 
         	when (INSTR(C.BLOCO, ';') = 0) then
@@ -120,7 +136,16 @@ VW_Criptografia AS (
             end 
         as ENCRYPTED,
 
-        SUBSTRING(C.SENHA, C.POSICAO, 1) AS CHAR_ATUAL,
+       COALESCE(case
+			        when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) < LENGTH(C.SENHA)) THEN 
+		        	CASE
+				        when (C.CHAR_ATUAL = '') then
+				        	SUBSTRING(AA.SENHA, 1, 1) 
+		        		else 
+		        			SUBSTRING(C.SENHA, C.POSICAO, 1)
+		            end 
+	            end
+	           ,'') AS CHAR_ATUAL,
         
         C.POSICAO + 1,
         
@@ -302,7 +327,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 7) 
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 8) 
 )
 SELECT *
 FROM VW_Criptografia

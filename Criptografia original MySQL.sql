@@ -69,21 +69,7 @@ VW_Criptografia AS (
     SELECT 
         C.ID,
         C.SENHA,
-        
-        /*CASE 
-            when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) 
-			   < LENGTH(C.SENHA)) THEN
-                CONCAT(
-                    C.CRYPT,
-                    SUBSTRING(
-                        C.CHANGED,
-                        CAST(MOD(18 * (LOCATE(C.CHAR_ATUAL,C.ORIGINAL) - 1) + 20, ((LENGTH(C.CHANGED) / 2) - 1)) AS UNSIGNED) + 1,
-                        1
-                    )
-                )
-            ELSE
-                '2'-- C.CRYPT
-        END*/ 
+
         case 
         	when (C.CHAR_ATUAL <> '') 
         	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) < LENGTH(C.SENHA)) then 
@@ -100,41 +86,41 @@ VW_Criptografia AS (
         	end
         as CRYPT,
         
-      /*  CASE WHEN MOD(LENGTH(C.SENHA), 2) <> 0 THEN
-            CONCAT(
-                SUBSTRING(
-                    C.CRYPT, 
-                    FLOOR(LENGTH(C.SENHA) / 2) + 2, 
-                    LENGTH(C.SENHA) - FLOOR(LENGTH(C.SENHA) / 2) + 2
-                ),
-                SUBSTRING(C.CRYPT, FLOOR(LENGTH(C.SENHA) / 2) + 1, 1),
-                SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2))
-            )
-        ELSE
-            CONCAT(
-                SUBSTRING(
-                    C.CRYPT, 
-                    FLOOR(LENGTH(C.SENHA) / 2) + 1, 
-                    LENGTH(C.SENHA) - FLOOR(LENGTH(C.SENHA) / 2) + 1
-                ),
-                SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2))
-            )
-        END AS*/ '' DIV_CRYPT,
+       CASE 
+	        when (CHAR_LENGTH(C.CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
+		        CASE WHEN MOD(LENGTH(C.SENHA), 2) <> 0 then
+		           CONCAT(
+		                SUBSTRING(
+		                    C.CRYPT, 
+		                    FLOOR(LENGTH(C.SENHA) / 2) + 2, 
+		                    LENGTH(C.SENHA) - FLOOR(LENGTH(C.SENHA) / 2) + 2
+		                ),
+		                SUBSTRING(C.CRYPT, FLOOR(LENGTH(C.SENHA) / 2) + 1, 1),
+		                SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2))
+		            )
+		        ELSE
+		            CONCAT(
+		            	SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2)),
+		                SUBSTRING(
+		                    C.CRYPT, 
+		                    FLOOR(LENGTH(C.SENHA) / 2) + 1, 
+		                    LENGTH(C.SENHA) - FLOOR(LENGTH(C.SENHA) / 2) + 1
+		                )
+		            )
+		        end
+		    else 
+		    	''
+	   		end 
+	   	as DIV_CRYPT,
          
-        case 
-        	when (INSTR(C.BLOCO, ';') = 0) then
-        		CASE 
-	        		when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) 
-			           = LENGTH(C.SENHA))
-			           AND (C.POSICAO <= (LENGTH(C.SENHA) * 2) + 2) THEN 
-			             CONCAT(C.ENCRYPTED, SUBSTRING(C.DIV_CRYPT, C.POS_AUX + 1, 1)) 
-			        ELSE
-			            C.ENCRYPTED
-        		end
-        	else 
-        		'Teste'
-            end 
-        as ENCRYPTED,
+       case 
+        	when (INSTR(C.BLOCO, ';') = 0) 
+        	  AND (((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) = LENGTH(C.SENHA))
+		      AND (C.POSICAO <= (LENGTH(C.SENHA) * 2) + 2)) THEN 
+		         CONCAT(C.ENCRYPTED, SUBSTRING(C.DIV_CRYPT, C.POS_AUX + 1, 1)) 
+        else 
+        	'Teste'
+        end as ENCRYPTED,
 
        COALESCE(case
 			        when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) < LENGTH(C.SENHA)) THEN 
@@ -162,114 +148,43 @@ VW_Criptografia AS (
         C.ORIGINAL,
         C.CHANGED,
         
-        
-       CASE 
-	       when ((LENGTH(C.BLOCO) - (length(replace(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - (length(replace(C.BLOCO, ';', ''))))) = 
-   		 	  (CASE 
-                  WHEN MOD(LENGTH(C.SENHA), 2) = 0 THEN
-                   	LENGTH(C.SENHA) + 1
-                 ELSE
-                  	LENGTH(C.SENHA) + 2
-               END) 
-          THEN
-	            CONCAT(
-	       			CONCAT(
-		       		  SUBSTRING(
-			       	    C.CHANGED
-		       			,mod(
-			       		   mod(
-				       		(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 1) as unsigned) *
-				       		 CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as unsigned)
-						    ) +    	
-				       		(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 2), ',', -1) as unsigned) *
-				       		 CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as unsigned)
-					       	 ) +
-					       	 (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', -1) as unsigned) *
-					       	  CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as unsigned)
-						     )
-						    ,cast((length(C.CHANGED) / 2) as unsigned)
-						    ) + cast((length(C.CHANGED) / 2) as unsigned)
-						    ,cast((length(C.CHANGED) / 2) as unsigned)
-						   )
-						   ,1
-						 ), 
-						 
-					 SUBSTRING(
-					 	C.CHANGED
-					 	,MOD(
-					 		MOD(		
-							  (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 1) as unsigned) *
-					       	   CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as unsigned)
-							  ) +  
-							  (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 2), ',', -1) as unsigned) *
-				       		   CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
-				       		  ) +
-				     		  (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', -1) as unsigned) *
-				     		   cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as unsigned)
-				     		  )
-				     		 ,cast((length(C.CHANGED) / 2) as unsigned)
-				     		) + cast((length(C.CHANGED) / 2) as unsigned)
-				     	  ,cast((length(C.CHANGED) / 2) as unsigned)
-					     ) + 1
-					    ,1
-					  )
-					),
-					
-					SUBSTRING(
-						C.CHANGED
-						,MOD(
-							MOD(
-								(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 1) as unsigned) *
-								 cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as unsigned)
-								) +
-								(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 2), ',', -1) as unsigned) *
-								 cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as unsigned)
-								) +		
-								(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO, ';', 1), ',', 2), ',', -1) as unsigned) *
-								 cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as unsigned)
+        case 
+        	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
+	         CASE 
+			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (INSTR(C.BLOCO, ';') > 0) THEN
+			       C.BLOCO 
+			    WHEN (LENGTH(C.SENHA) = 2) THEN
+			        CASE
+			            WHEN C.BLOCO = '' THEN
+			               CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										) - 1, ','
+									)
 								)
-							   ,cast((length(C.CHANGED) / 2) as unsigned)
-							) + cast((length(C.CHANGED) / 2) as unsigned)
-						   ,cast((length(C.CHANGED) / 2) as unsigned)
-						) + 1
-						,1
-					)
-				)
-				
-     
-	       	when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) = LENGTH(C.SENHA)) then
-        	CASE
-                WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')) = (cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) 
-                    and (C.BLOCO is not NULL)) THEN
-                	CASE 
-                        WHEN MOD(LENGTH(C.SENHA), 3) = 0 THEN 
-                         	CONCAT(C.BLOCO, ';')
-                        WHEN MOD(LENGTH(C.SENHA), 2) = 0 THEN
-                         	CONCAT(C.BLOCO, (INSTR(C.CHANGED,'Б') - 1), ';')
-                        ELSE
-                          	CONCAT(C.BLOCO, (INSTR(C.CHANGED,'Б') - 1), ',', (INSTR(C.CHANGED,'Б') - 1), ';')
-                    END
-           
-                WHEN ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) = LENGTH(C.SENHA)) 
-               		AND (C.BLOCO IS NULL) THEN
-                       	 CONCAT(C.BLOCO, (INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, 1, 1)) - 1), ',')
-                WHEN ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) = LENGTH(C.SENHA)) 
-                	AND (C.BLOCO IS NOT NULL) THEN 
-                		case 
-                			when (coalesce((INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, C.POSICAO - (LENGTH(C.SENHA) * 2 + 2), 1)) - 1), 0) <> 0) then 
-                			    CONCAT(CONCAT(C.BLOCO, (INSTR(C.CHANGED, SUBSTRING(C.ENCRYPTED, C.POSICAO - (LENGTH(C.SENHA) * 2 + 2), 1)) - 1)), ',')
-                			else 
-                				C.BLOCO
-                		end
-                END
-            else
-            	case
-            		when ((cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', ''))) <> 0) then 
-            			(cast(((LENGTH(C.ENCRYPTED) - (LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.ENCRYPTED, '¨', '')))
-            		else 
-            		    C.BLOCO
-            	end
-         END as BLOCO,
+			            WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 1 THEN
+			               CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 2, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										) - 1, ','
+									)
+								)
+			            WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2 THEN
+			               CONCAT(C.BLOCO, '89;')
+			            ELSE
+			               C.BLOCO
+			        END
+			    
+			    WHEN (LENGTH(C.SENHA) >= 3) THEN
+			        ''
+			    ELSE
+			       C.BLOCO
+			END 
+		 else
+			''
+	 	 end as BLOCO,
 
          (select MAX(COPR) from VW_GetCoprimo) as COPRIMO,
         
@@ -327,7 +242,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 8) 
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) 
 )
 SELECT *
 FROM VW_Criptografia

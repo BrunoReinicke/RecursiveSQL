@@ -151,8 +151,49 @@ VW_Criptografia AS (
         case 
         	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
 	         CASE 
-			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (INSTR(C.BLOCO, ';') > 0) THEN
-			       C.BLOCO 
+			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (INSTR(C.BLOCO, ';') > 0) then
+				    CONCAT(
+					    	SUBSTRING(
+							    		CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
+								    	,MOD(	
+									    	MOD(
+								    		    (cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
+										    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 1) as unsigned)
+										    	) +
+										     	(cast(SUBSTRING_INDEX(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
+										        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 2), ',', -1) as unsigned)
+										    	) +
+										    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
+										        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', -1) as unsigned)
+										    	)
+										    	,cast((length(C.CHANGED) / 2) as unsigned)
+											  ) 
+											 + cast((length(C.CHANGED) / 2) as unsigned)
+										    ,cast((length(C.CHANGED) / 2) as unsigned)
+										 ) + 1
+										 ,1
+							)
+							,SUBSTRING(
+										CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
+										,MOD(
+											MOD(
+												(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
+										    	 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 1) as unsigned)
+										    	) +
+										    	(cast(SUBSTRING_INDEX(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
+										    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
+										    	) +
+										    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
+										    	 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as UNSIGNED)
+										    	)
+										    	,cast((length(C.CHANGED) / 2) as unsigned)
+										    )
+										    + cast((length(C.CHANGED) / 2) as unsigned)
+										    ,cast((length(C.CHANGED) / 2) as unsigned)
+										 )
+										 ,1
+							)
+					)				
 			    WHEN (LENGTH(C.SENHA) = 2) THEN
 			        CASE
 			            WHEN C.BLOCO = '' THEN

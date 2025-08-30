@@ -151,50 +151,82 @@ VW_Criptografia AS (
         case 
         	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
 	         CASE 
-			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (INSTR(C.BLOCO, ';') > 0) then
-				    CONCAT(
-					    	SUBSTRING(
-							    		CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
-								    	,MOD(	
-									    	MOD(
-								    		    (cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
-										    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 1) as unsigned)
-										    	) +
-										     	(cast(SUBSTRING_INDEX(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
-										        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 2), ',', -1) as unsigned)
-										    	) +
-										    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
-										        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', -1) as unsigned)
-										    	)
-										    	,cast((length(C.CHANGED) / 2) as unsigned)
-											  ) 
-											 + cast((length(C.CHANGED) / 2) as unsigned)
-										    ,cast((length(C.CHANGED) / 2) as unsigned)
-										 ) + 1
-										 ,1
+			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (RIGHT(C.BLOCO, 1) = ';') then
+			    	CONCAT(
+					    CONCAT(
+						    	SUBSTRING(
+								    		CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
+									    	,MOD(	
+										    	MOD(
+									    		    (cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
+											    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 1) as unsigned)
+											    	) +
+											     	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
+											        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 2), ',', -1) as unsigned)
+											    	) +
+											    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
+											        * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', -1) as unsigned)
+											    	)
+											    	,cast((length(C.CHANGED) / 2) as unsigned)
+												  ) 
+												 + cast((length(C.CHANGED) / 2) as unsigned)
+											    ,cast((length(C.CHANGED) / 2) as unsigned)
+											 ) + 1
+											 ,1
+								)
+								,SUBSTRING(
+											CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
+											,MOD(
+												MOD(
+													(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
+											    	 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 1) as unsigned)
+											    	) +
+											    	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
+											    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
+											    	) +
+											    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
+											    	 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as UNSIGNED)
+											    	)
+											    	,cast((length(C.CHANGED) / 2) as unsigned)
+											    )
+											    + cast((length(C.CHANGED) / 2) as unsigned)
+											    ,cast((length(C.CHANGED) / 2) as unsigned)
+											 )
+											 ,1
+								)
+						)	
+						,SUBSTRING(
+								   CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
+								   ,MOD(
+										MOD(
+											(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
+											 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 1) as unsigned)
+											 ) +
+											 (cast(SUBSTRING_INDEX(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
+											 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 2), ',', -1) as unsigned)
+											 ) +
+											 (CAST(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as UNSIGNED)
+											 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', -1) as UNSIGNED)
+											 )
+											 ,cast((length(C.CHANGED) / 2) as unsigned)
+										)
+										+ cast((length(C.CHANGED) / 2) as unsigned)
+										,cast((length(C.CHANGED) / 2) as unsigned)
+									) + 1
+									,1
 							)
-							,SUBSTRING(
-										CONVERT(C.CHANGED USING utf8mb4) COLLATE utf8mb4_bin
-										,MOD(
-											MOD(
-												(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 1) as unsigned)
-										    	 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 1) as unsigned)
-										    	) +
-										    	(cast(SUBSTRING_INDEX(substring_INDEX(replace(C.BLOCO, ';', ''), ',', 2), ',', -1) as unsigned)
-										    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
-										    	) +
-										    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
-										    	 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as UNSIGNED)
-										    	)
-										    	,cast((length(C.CHANGED) / 2) as unsigned)
-										    )
-										    + cast((length(C.CHANGED) / 2) as unsigned)
-										    ,cast((length(C.CHANGED) / 2) as unsigned)
-										 )
-										 ,1
+					)
+					
+				WHEN (mod(LENGTH(C.SENHA), 3) = 0) THEN
+			       CONCAT(C.BLOCO, 
+		               		CONCAT(INSTR(
+									  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+									  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
+									) - 1, ','
+								)
 							)
-					)				
-			    WHEN (LENGTH(C.SENHA) = 2) THEN
+					
+			    when (mod(LENGTH(C.SENHA), 2) = 0) then
 			        CASE
 			            WHEN C.BLOCO = '' THEN
 			               CONCAT(C.BLOCO, 
@@ -213,18 +245,29 @@ VW_Criptografia AS (
 									)
 								)
 			            WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2 THEN
-			               CONCAT(C.BLOCO, '89;')
+			                CONCAT(C.BLOCO, '89;')
 			            ELSE
-			               C.BLOCO
-			        END
-			    
-			    WHEN (LENGTH(C.SENHA) >= 3) THEN
-			        ''
-			    ELSE
-			       C.BLOCO
-			END 
+			                C.BLOCO
+			    end
+	
+			   when (0 not in (mod(LENGTH(C.SENHA),3), mod(LENGTH(C.SENHA),2))) then
+			       case 
+						when C.BLOCO = '' then
+							CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										), ','
+									)
+								)
+						WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) IN (1,2) then
+						  CONCAT(C.BLOCO, '89,89;')
+			            ELSE
+			              C.BLOCO
+					end
+			   end
 		 else
-			''
+			coalesce(C.BLOCO, '')
 	 	 end as BLOCO,
 
          (select MAX(COPR) from VW_GetCoprimo) as COPRIMO,
@@ -236,7 +279,20 @@ VW_Criptografia AS (
         0 AS CONTADOR,
         0 AS VIRGULA,
         CAST('' AS CHAR(85)) AS AUX_BLOCO,
-        CAST('' AS CHAR(85)) AS BLOCO_ATUAL,
+        
+        case 
+        	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) then
+        		CASE 
+			    	WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (INSTR(C.BLOCO, ';') > 0) then
+			    		'1'
+			    	else
+			    		'0'
+			    END
+        	else
+        		C.BLOCO_ATUAL
+        	end
+        as BLOCO_ATUAL,
+        
         0 AS CONT_BLOCOS,
         
         CONCAT(
@@ -283,7 +339,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) 
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 6) 
 )
 SELECT *
 FROM VW_Criptografia

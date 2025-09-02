@@ -72,7 +72,7 @@ VW_Criptografia AS (
 
         case 
         	when (C.CHAR_ATUAL <> '') 
-        	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) < LENGTH(C.SENHA)) then 
+        	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) <= LENGTH(C.SENHA)) then 
         		CONCAT(
                     C.CRYPT,
                     SUBSTRING(
@@ -149,7 +149,7 @@ VW_Criptografia AS (
         C.CHANGED,
         
         case 
-        	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
+        	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) then
 	         CASE 
 			    WHEN ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2) AND (RIGHT(C.BLOCO, 1) = ';') then
 			    	CONCAT(
@@ -185,13 +185,13 @@ VW_Criptografia AS (
 											    	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
 											    	) +
 											    	(cast(substring_INDEX(replace(C.BLOCO, ';', ''), ',', -1) as unsigned)
-											    	 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as UNSIGNED)
+											    	 * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', -1) as UNSIGNED)
 											    	)
 											    	,cast((length(C.CHANGED) / 2) as unsigned)
 											    )
 											    + cast((length(C.CHANGED) / 2) as unsigned)
 											    ,cast((length(C.CHANGED) / 2) as unsigned)
-											 )
+											 ) + 1
 											 ,1
 								)
 						)	
@@ -218,13 +218,34 @@ VW_Criptografia AS (
 					)
 					
 				WHEN (mod(LENGTH(C.SENHA), 3) = 0) THEN
-			       CONCAT(C.BLOCO, 
-		               		CONCAT(INSTR(
-									  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
-									  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
-									) - 1, ','
+			       CASE
+			            WHEN C.BLOCO = '' THEN
+			               CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 3, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										) - 1, ','
+									)
 								)
-							)
+			            WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 1 THEN
+			               CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 2, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										) - 1, ','
+									)
+								)
+			            WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) = 2 THEN
+			                CONCAT(C.BLOCO, 
+			               		CONCAT(INSTR(
+										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+										  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
+										) - 1, ';'
+									)
+								)
+			            ELSE
+			                C.BLOCO
+			    	end
 					
 			    when (mod(LENGTH(C.SENHA), 2) = 0) then
 			        CASE
@@ -248,7 +269,7 @@ VW_Criptografia AS (
 			                CONCAT(C.BLOCO, '89;')
 			            ELSE
 			                C.BLOCO
-			    end
+			    	end
 	
 			   when (0 not in (mod(LENGTH(C.SENHA),3), mod(LENGTH(C.SENHA),2))) then
 			       case 
@@ -257,13 +278,13 @@ VW_Criptografia AS (
 			               		CONCAT(INSTR(
 										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
 										  CONVERT(SUBSTRING(C.DIV_CRYPT, 1, 1) USING utf8mb4) COLLATE utf8mb4_bin
-										), ','
+										) - 1, ','
 									)
 								)
 						WHEN (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) IN (1,2) then
-						  CONCAT(C.BLOCO, '89,89;')
+						   CONCAT(C.BLOCO, '89,89;')
 			            ELSE
-			              C.BLOCO
+			               C.BLOCO
 					end
 			   end
 		 else

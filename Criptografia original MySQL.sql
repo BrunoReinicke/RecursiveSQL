@@ -331,7 +331,7 @@ VW_Criptografia AS (
 	 	 end as BLOCO,
 
 	 	 case
-        	when (CONT_BLOCOS <> CONT_BLOCOS_AUX) then
+        	when (C.CONT_BLOCOS <> C.CONT_BLOCOS_AUX) then
         		case
         			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
         				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > C.COPRIMO)
@@ -369,7 +369,7 @@ VW_Criptografia AS (
         ) AS AUXILIAR,
         
         case
-        	when (coalesce(C.AUX_BLOCO, '') <> '') then
+        	when (C.CONT_BLOCOS <> C.CONT_BLOCOS_AUX) then
         		C.AUXILIAR 
         	else
         		C.ANTERIOR
@@ -393,7 +393,76 @@ VW_Criptografia AS (
         as AUX_BLOCO,
 
         case
-	        when (coalesce(C.BLOCO_ATUAL,'') <> '') then
+	         when (coalesce(C.BLOCO_ATUAL) <> '') and ((LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ';', ''))) = 0) then
+	         	REPLACE(C.BLOCO_ATUAL, 'Ж', '')
+	         when (C.AUXILIAR <> C.ANTERIOR) and (coalesce(C.ANTERIOR,'') <> '') then
+	         	CONCAT(
+		        	  SUBSTRING(
+					          C.BLOCO_ATUAL, 
+					          1, 
+					          CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1))
+					  )
+					  ,SUBSTRING(
+			        		 	C.CHANGED
+							   ,cast(
+								  	MOD(
+									  (MOD(
+										  (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 1) as unsigned)
+										     * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as unsigned))
+										   + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 2), ',', -1) as unsigned)
+									         * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as unsigned)) 
+									       + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', -1) as unsigned)
+									         * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as unsigned))	
+									      ,CHAR_LENGTH(C.CHANGED)
+										  ) 
+										 + CHAR_LENGTH(C.CHANGED)
+									  )
+									  ,CHAR_LENGTH(C.CHANGED)
+								    )
+								  as unsigned) + 1
+								 ,1
+							)
+					,SUBSTRING(
+								 C.CHANGED
+								,cast(MOD(
+										(MOD(
+											(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 1) as unsigned)
+									          * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as unsigned))
+									        + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 2), ',', -1) as unsigned)
+									          * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned))
+									        + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', -1) as unsigned)
+										      * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as unsigned))	  
+										    ,CHAR_LENGTH(C.CHANGED)
+										 )
+										 + CHAR_LENGTH(C.CHANGED))
+									  ,CHAR_LENGTH(C.CHANGED)
+								    )  
+								 as unsigned) + 1
+								,1
+						)
+						,SUBSTRING(
+								 C.CHANGED
+								,cast(MOD(
+										(MOD(
+											(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 1) as unsigned)
+									          * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as unsigned))
+									        + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', 2), ',', -1) as unsigned)
+									          * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as unsigned))
+									        + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', -1), ';', 1), ',', -1) as unsigned)
+										      * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as unsigned))	  
+										    ,CHAR_LENGTH(C.CHANGED)
+										 )
+										 + CHAR_LENGTH(C.CHANGED))
+									  ,CHAR_LENGTH(C.CHANGED)
+								    )  
+								 as unsigned) + 1
+								,1
+						)
+						,'Ж'
+						,SUBSTRING(C.BLOCO_ATUAL, 
+       						LOCATE(';', C.BLOCO_ATUAL) + 1)		
+				)
+	        when (coalesce(C.BLOCO_ATUAL,'') <> '') and ((LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))) = 0) then
 	        	CONCAT(
 		        		SUBSTRING(
 			        		 C.CHANGED
@@ -453,7 +522,7 @@ VW_Criptografia AS (
 						,SUBSTRING(C.BLOCO_ATUAL, 
        						LOCATE(';', C.BLOCO_ATUAL) + 1)
 					)
-        	when (coalesce(C.AUX_BLOCO,'') = coalesce(C.BLOCO,'')) then
+        	when (coalesce(C.AUX_BLOCO,'') = coalesce(C.BLOCO,'')) and (coalesce(C.BLOCO_ATUAL,'') = '') then
         		C.AUX_BLOCO
         	else
         		C.BLOCO_ATUAL
@@ -476,25 +545,7 @@ VW_Criptografia AS (
             end
         AS CONT_BLOCOS_AUX,
         
-        
-       /* case
-        	when (coalesce(C.AUXILIAR,'') <> '') THEN
-	          cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as unsigned) 
-	          * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as unsigned)
-	          	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as unsigned)
-	          	- cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as unsigned)
-	          	* cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as unsigned))
-	          	
-	         - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as unsigned)
-	           * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as unsigned)
-	             * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as unsigned)
-	             - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as unsigned)
-	             * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as unsigned))
-	        else
-	           0
-	        end 
-	    as*/ 0 DETERMINANTE,        
-	    
+        0 DETERMINANTE,        
            
         C.MATR_COPRIMO,
         C.GCD,
@@ -525,7 +576,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) - 2
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) + 3
 )
 SELECT *
 FROM VW_Criptografia

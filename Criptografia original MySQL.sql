@@ -102,7 +102,7 @@ VW_Criptografia AS (
 
         case 
         	when (C.CHAR_ATUAL <> '') 
-        	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) <= (LENGTH(C.SENHA) + 1)) then 
+        	  and ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) <= LENGTH(C.SENHA)) then 
         		CONCAT(
                     C.CRYPT,
                     SUBSTRING(
@@ -118,33 +118,20 @@ VW_Criptografia AS (
         
        CASE 
 	        when (CHAR_LENGTH(C.CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
-		        CASE WHEN MOD(LENGTH(C.SENHA), 2) <> 0 then
-		           CONCAT(
-					   (SELECT GROUP_CONCAT(SUBSTRING(sub.parte_crypt, numbers.n, 1) ORDER BY numbers.n desc SEPARATOR '') 
-						FROM (
-						    SELECT SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2) - 1) AS parte_crypt
-						) AS sub
-						CROSS JOIN JSON_TABLE(
-						    CONCAT('[1', REPEAT(',1', LENGTH(sub.parte_crypt) - 1), ']'),
-						    '$[*]' COLUMNS (n FOR ORDINALITY)
-						) AS numbers),
-						
-						SUBSTRING(C.CRYPT, FLOOR(LENGTH(C.SENHA) / 2), 1),
-						
-						(SELECT GROUP_CONCAT(SUBSTRING(sub.parte_crypt, numbers.n, 1) ORDER BY numbers.n desc SEPARATOR '') 
-						FROM (
-						    SELECT SUBSTRING(C.CRYPT, FLOOR(LENGTH(C.SENHA) / 2) + 1, FLOOR(LENGTH(C.SENHA) / 2)) AS parte_crypt
-						) AS sub
-						CROSS JOIN JSON_TABLE(
-						    CONCAT('[1', REPEAT(',1', LENGTH(sub.parte_crypt) - 1), ']'),
-						    '$[*]' COLUMNS (n FOR ORDINALITY)
-						) AS numbers)
-		            )
-		        ELSE
+	          CASE 
+				when (CHAR_LENGTH(C.CRYPT) + CHAR_LENGTH(C.SENHA)) = 2 then 
+		        	C.CRYPT
+	        	WHEN MOD(CHAR_LENGTH(C.SENHA), 2) <> 0 then
+	        		CONCAT(
+		        		REVERSE(SUBSTRING(C.CRYPT, 1, FLOOR(CHAR_LENGTH(C.CRYPT) / 2))),
+		        	    SUBSTRING(C.CRYPT, FLOOR(CHAR_LENGTH(C.SENHA) / 2) + 1, 1),
+	   				    REVERSE(SUBSTRING(C.CRYPT, FLOOR(CHAR_LENGTH(C.CRYPT) / 2) + 2))
+   					)
+		      ELSE
 		            CONCAT(
 					   (SELECT GROUP_CONCAT(SUBSTRING(sub.parte_crypt, numbers.n, 1) ORDER BY numbers.n desc SEPARATOR '') 
 						FROM (
-						    SELECT SUBSTRING(C.CRYPT, 1, FLOOR(LENGTH(C.SENHA) / 2)) AS parte_crypt
+						    SELECT SUBSTRING(C.CRYPT, 1, FLOOR(CHAR_LENGTH(C.SENHA) / 2)) AS parte_crypt
 						) AS sub
 						CROSS JOIN JSON_TABLE(
 						    CONCAT('[1', REPEAT(',1', LENGTH(sub.parte_crypt) - 1), ']'),
@@ -153,16 +140,16 @@ VW_Criptografia AS (
 						
 						(SELECT GROUP_CONCAT(SUBSTRING(sub.parte_crypt, numbers.n, 1) ORDER BY numbers.n desc SEPARATOR '') 
 						FROM (
-						    SELECT SUBSTRING(C.CRYPT, FLOOR(LENGTH(C.SENHA) / 2) + 1, FLOOR(LENGTH(C.SENHA) / 2)) AS parte_crypt
+						    SELECT SUBSTRING(C.CRYPT, FLOOR(CHAR_LENGTH(C.SENHA) / 2) + 1, FLOOR(CHAR_LENGTH(C.SENHA) / 2)) AS parte_crypt
 						) AS sub
 						CROSS JOIN JSON_TABLE(
-						    CONCAT('[1', REPEAT(',1', LENGTH(sub.parte_crypt) - 1), ']'),
+						    CONCAT('[1', REPEAT(',1', CHAR_LENGTH(sub.parte_crypt) - 1), ']'),
 						    '$[*]' COLUMNS (n FOR ORDINALITY)
 						) AS numbers)
 		            )
-		        end
+		      end
 		    else 
-		    	''
+		       C.DIV_CRYPT
 	   		end 
 	   	as DIV_CRYPT,
          
@@ -181,7 +168,12 @@ VW_Criptografia AS (
 				        when (C.CHAR_ATUAL = '') then
 				        	SUBSTRING(AA.SENHA, 1, 1) 
 		        		else 
-		        			SUBSTRING(C.SENHA, C.POSICAO, 1)
+		        			case 
+		        				when coalesce(SUBSTRING(C.SENHA, C.POSICAO, 1), '') <> '' then
+		        					SUBSTRING(C.SENHA, C.POSICAO, 1)
+		        				else 
+		        					C.CHAR_ATUAL		
+		        			end
 		            end 
 	            end
 	           ,'') AS CHAR_ATUAL,
@@ -204,9 +196,19 @@ VW_Criptografia AS (
         case 
         	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA)) then
 	         CASE 
-		        when ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) = CHAR_LENGTH(C.SENHA) then
-		        	CONCAT(C.BLOCO, '89,89;')				
-				WHEN (mod(CHAR_LENGTH(C.SENHA), 3) = 0) THEN
+		      /*  when ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) = CHAR_LENGTH(C.SENHA) then
+		        	 CONCAT(C.BLOCO, '89,89;')	*/		
+				WHEN (mod(CHAR_LENGTH(C.SENHA), 3) = 0) 
+				   and (INSTR(
+						  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+						  CONVERT(
+						  		SUBSTRING(
+						  				C.DIV_CRYPT, 
+						  				(LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) + 1, 
+						  				1) 
+						  		USING utf8mb4) 
+						  COLLATE utf8mb4_bin
+						) - 1 > 0) then
 			       CASE
 			            WHEN (C.BLOCO = '') or (RIGHT(C.BLOCO, 1) = ';') THEN
 			               CONCAT(C.BLOCO, 
@@ -306,7 +308,17 @@ VW_Criptografia AS (
 	
 			   when (0 not in (mod(CHAR_LENGTH(C.SENHA),3), mod(CHAR_LENGTH(C.SENHA),2))) then
 			      case 
-					when (C.BLOCO = '') or (RIGHT(C.BLOCO, 1) = ';') then
+					when ((C.BLOCO = '') or (RIGHT(C.BLOCO, 1) = ';'))
+						and (INSTR(
+								  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+								  CONVERT(
+								  		SUBSTRING(
+								  				C.DIV_CRYPT, 
+								  				(LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) + 1, 
+								  				1) 
+								  		USING utf8mb4) 
+								  COLLATE utf8mb4_bin
+								) - 1 > 0) then
 					  CONCAT(C.BLOCO, 
 		               		CONCAT(INSTR(
 									  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
@@ -576,7 +588,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) + 3
+    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4) + 1
 )
 SELECT *
 FROM VW_Criptografia

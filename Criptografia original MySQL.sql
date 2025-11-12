@@ -85,14 +85,16 @@ VW_Criptografia AS (
         CAST('' AS CHAR(85)) AS BLOCO_ATUAL,
         0 AS CONT_BLOCOS,
         0 as CONT_BLOCOS_AUX,
+        CAST('' AS CHAR(85)) AS TESTE,
         0 AS DETERMINANTE,
         '18,11,12;13,14,15;2,16,17' AS MATR_COPRIMO,
         0 AS GCD,
         0 AS DIVIDENDO,
         0 AS DIVISOR,
-        0 AS RESTO
+        0 AS RESTO,
+        1 as LINHA
     FROM USUARIO_A AA
-    WHERE AA.ID = 1 
+    -- WHERE AA.ID = 1 
     
     UNION ALL
     
@@ -148,7 +150,7 @@ VW_Criptografia AS (
         end as ENCRYPTED,
 
        COALESCE(case
-			        when ((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) <= CHAR_LENGTH(C.SENHA)) THEN 
+			        when (CHAR_LENGTH(C.CRYPT) <= CHAR_LENGTH(C.SENHA)) THEN 
 		        	CASE
 				        when (C.CHAR_ATUAL = '') then
 				        	SUBSTRING(AA.SENHA, 1, 1) 
@@ -553,7 +555,38 @@ VW_Criptografia AS (
             end
         AS CONT_BLOCOS_AUX,
         
-        0 DETERMINANTE,        
+        case 
+        	when COALESCE(C.AUXILIAR, '') <> '' then 
+        		cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+        	else 
+        		''
+            end
+        as TESTE,
+           
+        case
+        	when COALESCE(C.AUXILIAR, '') <> '' THEN
+        		cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
+        		* (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+        		  * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+        		  - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+        		  * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+        		  )
+        	   - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
+        	    * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+        	     * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+        	     - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+        	     * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+        	     )
+        	   + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
+        	   * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+        	     * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+        	     - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+        	     * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+        	     )
+        	else
+        		0
+        	end 
+        as DETERMINANTE,        
            
         C.MATR_COPRIMO,
         C.GCD,
@@ -580,11 +613,20 @@ VW_Criptografia AS (
         		mod((LOCATE(binary C.CHAR_ATUAL,C.ORIGINAL) - 1), cast((length(C.CHANGED) / 2) as unsigned))
         	else
         		RESTO
-        end RESTO
+        end RESTO,
+        
+        LINHA + 1 as LINHA
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE C.POSICAO <= (LENGTH(AA.SENHA) * 4)
+    WHERE not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
+),
+VW_CRIPT_AUX as (
+	SELECT ROW_NUMBER() OVER (PARTITION BY id ORDER BY linha DESC) as RN,
+		ID, SENHA, BLOCO_ATUAL
+	FROM VW_Criptografia
 )
-SELECT *
-FROM VW_Criptografia
+select ID, SENHA, BLOCO_ATUAL
+from VW_CRIPT_AUX
+where RN = 1
+order by ID 

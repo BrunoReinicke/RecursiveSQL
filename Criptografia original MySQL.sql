@@ -1,5 +1,6 @@
 /*delete from USUARIO_A 
 
+insert into USUARIO_A(ID, SENHA) VALUES(1, 'h')
 insert into USUARIO_A(ID, SENHA) VALUES(1, '0biQz2;y6(FQ2Gc7ANq952YCLIXj')
 
 select *
@@ -82,6 +83,8 @@ VW_Criptografia AS (
         LENGTH(AA.SENHA) AS POS_AUX,
         '!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\Б' AS ORIGINAL,
         'Üúùø÷öõôóòñðïîíìëêéèçæåäãâáàßÝÛÚÙØ×ÖÕÔÓÒÑÐÏÎÍÌËÊÉÈÇÆÅÄÃÂÁÀ¿¾½¼»º¹¸·¶µ´³²±°¯®Д¬«ª©¨§¦¥¤£¡ГБ' AS CHANGED,
+        CAST('' AS CHAR(85)) AS LEN_BLOCO,
+        CAST('' AS CHAR(85)) AS LEN_SENHA,
         CAST('' AS CHAR(85)) AS BLOCO,
         1 AS COPRIMO,
         0 as COPRIMO_AUX,
@@ -188,6 +191,9 @@ VW_Criptografia AS (
         C.ORIGINAL,
         C.CHANGED,
         
+        ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) LEN_BLOCO,
+        CHAR_LENGTH(C.SENHA) LEN_SENHA,
+        
         case 
 	        when ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) = CHAR_LENGTH(C.SENHA) then
 		        CASE
@@ -199,7 +205,7 @@ VW_Criptografia AS (
 			        	C.BLOCO
 			    END
         	when (CHAR_LENGTH(C.DIV_CRYPT) = CHAR_LENGTH(C.SENHA))
-        	  and (INSTR(
+        	  and ((INSTR(
 					  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
 					  CONVERT(
 					  		SUBSTRING(
@@ -208,7 +214,8 @@ VW_Criptografia AS (
 					  				1) 
 					  		USING utf8mb4) 
 					  COLLATE utf8mb4_bin
-					) - 1 > 0) then
+					) - 1 > 0) 
+					or (CHAR_LENGTH(C.SENHA) > 1)) then
 	         CASE 
 				WHEN (mod(CHAR_LENGTH(C.SENHA), 3) = 0) then
 			       CASE
@@ -356,47 +363,29 @@ VW_Criptografia AS (
         			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
         				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
         				(case 
-				    	  	when not ((CASE 
+				    	  	when ((CASE 
 								    WHEN ((SELECT 
 								            CASE 
 								                WHEN 90 = 0 THEN ABS(DE.det)
 								                WHEN DE.det = 0 THEN 90
 								                ELSE 
 								                    CASE 
+													    WHEN DE.det = 0 THEN 90
 													    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+													    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+													                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+													    
+													    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+													    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+													    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+													    
 													    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
 													    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
 													    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
 													         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
-													    WHEN ((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													         ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0
-													         THEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
-													    WHEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													         (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) = 0
-													         THEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													               ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))
-													    WHEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													         (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) = 0
-													         THEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													               (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))
-													    WHEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) %
-													         ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													          (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													           (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													            ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))) = 0
-													         THEN ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													               (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													                (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                 ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))))
+													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+ 													    
 													    ELSE 1
 													END
 								            END
@@ -459,6 +448,138 @@ VW_Criptografia AS (
         as RESERVA,*/
         
         case
+	        when  (C.CONTADOR < 2) 
+	          and ((case
+		        	when (C.CONT_BLOCOS_AUX <> (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
+		        	  and (C.CONT_BLOCOS_AUX <> C.CONT_BLOCOS) 
+		        	  and (coalesce(C.AUXILIAR,'') <> '') then
+		        		case
+		        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
+		        				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
+		        				(case 
+						    	  	when ((CASE 
+										    WHEN ((SELECT 
+										            CASE 
+										                WHEN 90 = 0 THEN ABS(DE.det)
+										                WHEN DE.det = 0 THEN 90
+										                ELSE 
+										                    CASE 
+															    WHEN DE.det = 0 THEN 90
+															    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+															    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+															                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+															    
+															    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+															    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+															    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+															    
+															    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+															    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+															    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+															         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))     
+															    
+															    ELSE 1
+															END
+										            END
+										          FROM (SELECT ABS(
+										              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
+										               * (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 )
+										               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
+										                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+										                 )
+										               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
+										               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+										                 )
+										            ) % 90) as det
+										         ) DE) = 1)
+										    THEN 1
+										    ELSE 0
+										END) 
+										 = 0) and (C.CONTADOR < 2) then
+										 case
+						        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
+						        			    (select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > C.COPRIMO)
+						        			when (C.COPRIMO = CHAR_LENGTH(C.CHANGED) - 1) then 
+						        				1
+						        			else
+						        				C.COPRIMO
+						        		 end
+									else 
+										C.COPRIMO
+									end))
+		        			when (C.COPRIMO = CHAR_LENGTH(C.CHANGED) - 1) then 
+		        				1
+		        			else
+		        				C.COPRIMO
+		        		end
+		        	else
+		        		C.COPRIMO
+		        	end) >= (select MAX(AA.LINHA) from VW_GetCoprimo AA)) 
+		        	
+		        and ((CASE 
+					    WHEN ((SELECT 
+					            CASE 
+					                WHEN 90 = 0 THEN ABS(DE.det)
+					                WHEN DE.det = 0 THEN 90
+					                ELSE 
+					                    CASE 
+										    WHEN DE.det = 0 THEN 90
+										    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+										    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+										                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+										    
+										    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+										    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+										    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+										    
+										    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+										    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+										    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+										         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+										    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+												 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))     
+										    
+										    ELSE 1
+										END
+					            END
+					          FROM (SELECT ABS(
+					              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
+					               * (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+					                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+					                 )
+					               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
+					                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+					                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+					                 )
+					               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
+					               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+					                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+					                 )
+					            ) % 90) as det
+					         ) DE) = 1)
+					    THEN 1
+					    ELSE 0
+					END) 
+					 = 0) then
+	        	C.MATRIZ
 	        when (C.CONTADOR = 3) or (coalesce(C.AUXILIAR,'') = '') then 
 	        	C.MATRIZ
 	        when (C.CONTADOR = 2) 
@@ -467,68 +588,102 @@ VW_Criptografia AS (
 	          and (C.CONT_BLOCOS_AUX <> (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
         	  and (C.CONT_BLOCOS_AUX <> C.CONT_BLOCOS) then 
 	        	case 
-		        	when not ((CASE 
+		        	when ((CASE 
+							    WHEN ((SELECT 
+							            CASE 
+							                WHEN 90 = 0 THEN ABS(DE.det)
+							                WHEN DE.det = 0 THEN 90
+							                ELSE 
+							                    CASE 
+												    WHEN DE.det = 0 THEN 90
+												    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+												    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+												                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+												    
+												    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+												    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+												    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+												    
+												    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+												    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+												    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+												         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+												    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+												    
+													ELSE 1
+												END
+							            END
+							          FROM (SELECT ABS(
+							              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
+							               * (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 )
+							               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
+							                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+							                 )
+							               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
+							               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+							                 )
+							            ) % 90) as det
+							         ) DE) = 1)
+							    THEN 1
+							    ELSE 0
+							END) 
+							 = 0) then 
+					    case
+					    	when ((CASE 
 								    WHEN ((SELECT 
 								            CASE 
 								                WHEN 90 = 0 THEN ABS(DE.det)
 								                WHEN DE.det = 0 THEN 90
 								                ELSE 
 								                    CASE 
+													    WHEN DE.det = 0 THEN 90
 													    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+													    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+													                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+													    
+													    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+													    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+													    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+													    
 													    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
 													    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
 													    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
 													         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
-													    WHEN ((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													         ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0
-													         THEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
-													    WHEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													         (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) = 0
-													         THEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													               ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))
-													    WHEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													         (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) = 0
-													         THEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													               (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))
-													    WHEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) %
-													         ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													          (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													           (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													            ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))) = 0
-													         THEN ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-													               (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-													                (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-													                 ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))))
+													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+													    
 													    ELSE 1
 													END
 								            END
 								          FROM (SELECT ABS(
-								              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
-								               * (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
-								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+								              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED)
+								               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
 								                 )
-								               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
-								                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
-								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+								               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+								                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
 								                 )
-								               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
-								               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
-								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
-								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+								               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED)
+								               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
 								                 )
 								            ) % 90) as det
 								         ) DE) = 1)
@@ -536,25 +691,101 @@ VW_Criptografia AS (
 								    ELSE 0
 								END) 
 								 = 0) then 
-		        		CONCAT(
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED),
-				        	';',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED),
-				        	';',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED),
-				        	',',
-				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
-				        )
+								case
+									when ((CASE 
+										    WHEN ((SELECT 
+										            CASE 
+										                WHEN 90 = 0 THEN ABS(DE.det)
+										                WHEN DE.det = 0 THEN 90
+										                ELSE 
+										                    CASE 
+															    WHEN DE.det = 0 THEN 90
+															    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+															    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+															                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+															    
+															    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+															    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+															    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+															    
+															    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+															    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+															    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+															         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+													    	 
+															    ELSE 1
+															END
+										            END
+										          FROM (SELECT ABS(
+										              ((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED) + 1)
+										               * ((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED) + 1)
+										                 * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED) + 1)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+										                 )
+										               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+										                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+										                 * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED) + 1)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+										                 )
+										               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED)
+										               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+										                 )
+										            ) % 90) as det
+										         ) DE) = 1)
+										    THEN 1
+										    ELSE 0
+										END) 
+										 = 0) then
+										 '19,12,13;14,15,16;3,17,18'
+									else
+										CONCAT(
+								        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED) + 1),
+								        	',',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED),
+								        	',',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED),
+								        	';',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED),
+								        	',',
+								        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED) + 1),
+								        	',',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED),
+								        	';',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED),
+								        	',',
+								        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED),
+								        	',',
+								        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED) + 1)
+								        ) 
+						        end
+							else
+								CONCAT(
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED),
+						        	';',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED),
+						        	';',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED),
+						        	',',
+						        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+						        )
+					    end
 		        	else
 			        	CONCAT(
 				        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED),
@@ -635,54 +866,207 @@ VW_Criptografia AS (
 		as PERMUTA, */
 
         case
+	      when (C.CONTADOR = 2) 
+	          and (coalesce(C.ANTERIOR,'') <> '') 
+	          and (coalesce(C.AUXILIAR,'') <> '') 
+	          and (C.CONT_BLOCOS_AUX <> (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
+        	  and (C.CONT_BLOCOS_AUX <> C.CONT_BLOCOS) then 
+	        	case 
+		        	when ((CASE 
+							    WHEN ((SELECT 
+							            CASE 
+							                WHEN 90 = 0 THEN ABS(DE.det)
+							                WHEN DE.det = 0 THEN 90
+							                ELSE 
+							                    CASE 
+												    WHEN DE.det = 0 THEN 90
+												    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+												    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+												                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+												    
+												    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+												    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+												    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+												    
+												    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+												    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+												    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+												         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+												    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+												    
+													ELSE 1
+												END
+							            END
+							          FROM (SELECT ABS(
+							              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
+							               * (CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 )
+							               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
+							                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
+							                 )
+							               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
+							               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+							                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
+							                 )
+							            ) % 90) as det
+							         ) DE) = 1)
+							    THEN 1
+							    ELSE 0
+							END) 
+							 = 0) then 
+					    case
+					    	when ((CASE 
+								    WHEN ((SELECT 
+								            CASE 
+								                WHEN 90 = 0 THEN ABS(DE.det)
+								                WHEN DE.det = 0 THEN 90
+								                ELSE 
+								                    CASE 
+													    WHEN DE.det = 0 THEN 90
+													    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+													    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+													                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+													    
+													    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+													    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+													    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+													    
+													    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+													    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+													    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+													         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+													    
+													    ELSE 1
+													END
+								            END
+								          FROM (SELECT ABS(
+								              (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED)
+								               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+								                 )
+								               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+								                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+								                 )
+								               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED)
+								               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+								                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+								                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+								                 )
+								            ) % 90) as det
+								         ) DE) = 1)
+								    THEN 1
+								    ELSE 0
+								END) 
+								 = 0) then 
+								case
+									when ((CASE 
+										    WHEN ((SELECT 
+										            CASE 
+										                WHEN 90 = 0 THEN ABS(DE.det)
+										                WHEN DE.det = 0 THEN 90
+										                ELSE 
+										                    CASE 
+															    WHEN DE.det = 0 THEN 90
+															    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+															    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+															                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+															    
+															    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+															    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+															    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+															    
+															    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
+															    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
+															    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
+															         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
+															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) 
+															    
+													    	    ELSE 1
+															END
+										            END
+										          FROM (SELECT ABS(
+										              ((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED) + 1)
+										               * ((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED) + 1)
+										                 * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED) + 1)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+										                 )
+										               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+										                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+										                 * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED) + 1)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+										                 )
+										               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED)
+										               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED)
+										                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED)
+										                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED)
+										                 )
+										            ) % 90) as det
+										         ) DE) = 1)
+										    THEN 1
+										    ELSE 0
+										END) 
+										 = 0) then
+										 C.CONTADOR + 1
+									else
+										C.CONTADOR 
+						        end
+							else
+								C.CONTADOR
+					    end
+		        	else
+			        	C.CONTADOR
+			        end
 		  when (coalesce(C.AUXILIAR,'') <> '') 
 		    and (C.CONTADOR < 2) 
 			and (C.CONT_BLOCOS_AUX <> (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
 			and (C.CONT_BLOCOS <> C.CONT_BLOCOS_AUX)
-			/*and (C.COPRIMO >= (select MAX(AA.LINHA) from VW_GetCoprimo AA))*/ then
+			and (C.COPRIMO >= (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
 			 case
-				when not ((CASE 
+				when ((CASE 
 					    WHEN ((SELECT 
 					            CASE 
 					                WHEN 90 = 0 THEN ABS(DE.det)
 					                WHEN DE.det = 0 THEN 90
 					                ELSE 
 					                    CASE 
+										    WHEN DE.det = 0 THEN 90
 										    WHEN 90 % DE.det = 0 THEN ABS(DE.det)
+										    WHEN DE.det IN (1, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 49, 
+										                   53, 59, 61, 67, 71, 73, 77, 79, 83, 89) THEN 1
+										    
+										    WHEN DE.det % 2 = 0 AND 90 % 2 = 0 THEN 2
+										    WHEN DE.det % 3 = 0 AND 90 % 3 = 0 THEN 3
+										    WHEN DE.det % 5 = 0 AND 90 % 5 = 0 THEN 5
+										    
 										    WHEN DE.det % (90 % DE.det) = 0 THEN (90 % DE.det)
 										    WHEN (90 % DE.det) % (DE.det % (90 % DE.det)) = 0 THEN (DE.det % (90 % DE.det))
 										    WHEN (DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))) = 0 
 										         THEN ((90 % DE.det) % (DE.det % (90 % DE.det)))
-										    WHEN ((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										         ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0
-										         THEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
-										    WHEN ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										         (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) = 0
-										         THEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										               ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))
-										    WHEN (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										          ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-										         (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) = 0
-										         THEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										               (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))
-										    WHEN (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										          (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))) %
-										         ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										           ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-										          (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										           (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										            ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))))) = 0
-										         THEN ((((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										                ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))) %
-										               (((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) %
-										                (((90 % DE.det) % (DE.det % (90 % DE.det))) % 
-										                 ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))))))
-										    ELSE 1
+										    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
+											     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
+										    
+											ELSE 1
 										END
 					            END
 					          FROM (SELECT ABS(
@@ -931,7 +1315,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
+    WHERE (C.POSICAO <= 50)-- not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
 )
 select *
 from VW_CRIPTOGRAFIA

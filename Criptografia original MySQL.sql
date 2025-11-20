@@ -75,27 +75,27 @@ VW_Criptografia AS (
     SELECT 
         AA.ID,
         AA.SENHA,
-        CAST('' AS CHAR(85)) AS CRYPT,
-        CAST('' AS CHAR(85)) AS DIV_CRYPT,
-        CAST('' AS CHAR(85)) AS ENCRYPTED,
-        CAST('' as CHAR(85)) AS CHAR_ATUAL,
+        CAST('' AS CHAR(100)) AS CRYPT,
+        CAST('' AS CHAR(100)) AS DIV_CRYPT,
+        CAST('' AS CHAR(100)) AS ENCRYPTED,
+        CAST('' as CHAR(100)) AS CHAR_ATUAL,
         1 AS POSICAO,
         LENGTH(AA.SENHA) AS POS_AUX,
         '!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\Б' AS ORIGINAL,
         'Üúùø÷öõôóòñðïîíìëêéèçæåäãâáàßÝÛÚÙØ×ÖÕÔÓÒÑÐÏÎÍÌËÊÉÈÇÆÅÄÃÂÁÀ¿¾½¼»º¹¸·¶µ´³²±°¯®Д¬«ª©¨§¦¥¤£¡ГБ' AS CHANGED,
-        CAST('' AS CHAR(85)) AS LEN_BLOCO,
-        CAST('' AS CHAR(85)) AS LEN_SENHA,
-        CAST('' AS CHAR(85)) AS BLOCO,
+        CAST('' AS CHAR(100)) AS LEN_BLOCO,
+        CAST('' AS CHAR(100)) AS LEN_SENHA,
+        CAST('' AS CHAR(100)) AS BLOCO,
         1 AS COPRIMO,
         0 as COPRIMO_AUX,
         '18,11,12;13,14,15;2,16,17' AS MATRIZ,
-        CAST('' as CHAR(85)) AS AUXILIAR,
-        CAST('' AS CHAR(85)) AS ANTERIOR,
+        CAST('' as CHAR(100)) AS AUXILIAR,
+        CAST('' AS CHAR(100)) AS ANTERIOR,
         0 AS CONTADOR,
         0 AS VIRGULA,
-        CAST('' AS CHAR(85)) AS AUX_BLOCO,
-        CAST('' AS CHAR(85)) AS BLOCO_ATUAL,
-        CAST('' AS CHAR(85)) AS BLOCO_ANT,        
+        CAST('' AS CHAR(100)) AS AUX_BLOCO,
+        CAST('' AS CHAR(100)) AS BLOCO_ATUAL,
+        CAST('' AS CHAR(100)) AS BLOCO_ANT,        
         0 AS CONT_BLOCOS,
         0 as CONT_BLOCOS_AUX,
         0 AS DETERMINANTE,
@@ -215,7 +215,8 @@ VW_Criptografia AS (
 					  		USING utf8mb4) 
 					  COLLATE utf8mb4_bin
 					) - 1 > 0) 
-					or (CHAR_LENGTH(C.SENHA) > 1)) then
+					or (CHAR_LENGTH(C.SENHA) > 1))
+				and (((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) < CHAR_LENGTH(C.SENHA)) then
 	         CASE 
 				WHEN (mod(CHAR_LENGTH(C.SENHA), 3) = 0) then
 			       CASE
@@ -268,7 +269,7 @@ VW_Criptografia AS (
 			    when (mod(CHAR_LENGTH(C.SENHA), 2) = 0) and 
 			    	(((((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))))
               		- ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, '89', ''))) / LENGTH('89'))) < CHAR_LENGTH(C.SENHA)) then
-			        CASE
+			       CASE
 			            WHEN (C.BLOCO = '') or (RIGHT(C.BLOCO, 1) = ';') THEN
 			               CONCAT(C.BLOCO, 
 			               			CONCAT(INSTR(
@@ -298,7 +299,7 @@ VW_Criptografia AS (
 									)
 								)
 			            WHEN (mod((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))), 2) = 0) then
-			            	CONCAT(C.BLOCO,
+			            	 CONCAT(C.BLOCO,
 					                CONCAT(INSTR(
 												  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
 												  CONVERT(
@@ -320,7 +321,7 @@ VW_Criptografia AS (
 				   	  when ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) % 2 <> 0)
 				   	    or (RIGHT(C.BLOCO, 1) = ';')
 				   	  	or (coalesce(C.BLOCO,'') = '') then
-					  	  CONCAT(C.BLOCO, 
+				   	  	CONCAT(C.BLOCO, 
 			               		CONCAT(INSTR(
 										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
 										  CONVERT(
@@ -334,19 +335,19 @@ VW_Criptografia AS (
 									)
 								)
 					  else
-					  	 CONCAT(C.BLOCO, 
-			               		CONCAT(INSTR(
-										  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
-										  CONVERT(
-										  		SUBSTRING(
-										  				C.DIV_CRYPT, 
-										  				(LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) + 1, 
-										  				1) 
-										  		USING utf8mb4) 
-										  COLLATE utf8mb4_bin
-										) - 1, ';'
-									)
+					  	CONCAT(C.BLOCO, 
+		               		CONCAT(INSTR(
+									  CONVERT(CHANGED USING utf8mb4) COLLATE utf8mb4_bin, 
+									  CONVERT(
+									  		SUBSTRING(
+									  				C.DIV_CRYPT, 
+									  				(LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', ''))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) + 1, 
+									  				1) 
+									  		USING utf8mb4) 
+									  COLLATE utf8mb4_bin
+									) - 1, ';'
 								)
+							)
 					  end
 			   else
 			   	  C.BLOCO
@@ -363,7 +364,7 @@ VW_Criptografia AS (
         			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
         				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
         				(case 
-				    	  	when ((CASE 
+				    	  	when not ((CASE 
 								    WHEN ((SELECT 
 								            CASE 
 								                WHEN 90 = 0 THEN ABS(DE.det)
@@ -386,7 +387,7 @@ VW_Criptografia AS (
 													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
  													    
-													    ELSE 1
+													    ELSE 0
 													END
 								            END
 								          FROM (SELECT ABS(
@@ -480,7 +481,7 @@ VW_Criptografia AS (
 															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))     
 															    
-															    ELSE 1
+															    ELSE 0
 															END
 										            END
 										          FROM (SELECT ABS(
@@ -551,7 +552,7 @@ VW_Criptografia AS (
 										    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 												 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))     
 										    
-										    ELSE 1
+										    ELSE 0
 										END
 					            END
 					          FROM (SELECT ABS(
@@ -611,7 +612,7 @@ VW_Criptografia AS (
 												    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 												    
-													ELSE 1
+													ELSE 0
 												END
 							            END
 							          FROM (SELECT ABS(
@@ -663,7 +664,7 @@ VW_Criptografia AS (
 													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 													    
-													    ELSE 1
+													    ELSE 0
 													END
 								            END
 								          FROM (SELECT ABS(
@@ -715,7 +716,7 @@ VW_Criptografia AS (
 															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 													    	 
-															    ELSE 1
+															    ELSE 0
 															END
 										            END
 										          FROM (SELECT ABS(
@@ -895,7 +896,7 @@ VW_Criptografia AS (
 												    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 												    
-													ELSE 1
+													ELSE 0
 												END
 							            END
 							          FROM (SELECT ABS(
@@ -947,7 +948,7 @@ VW_Criptografia AS (
 													    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 													    
-													    ELSE 1
+													    ELSE 0
 													END
 								            END
 								          FROM (SELECT ABS(
@@ -999,7 +1000,7 @@ VW_Criptografia AS (
 															    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 													    	 		 then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) 
 															    
-													    	    ELSE 1
+													    	    ELSE 0
 															END
 										            END
 										          FROM (SELECT ABS(
@@ -1066,7 +1067,7 @@ VW_Criptografia AS (
 										    when ((90 % DE.det) % (DE.det % (90 % DE.det))) % ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det)))) = 0 
 											     then ((DE.det % (90 % DE.det)) % ((90 % DE.det) % (DE.det % (90 % DE.det))))
 										    
-											ELSE 1
+											ELSE 0
 										END
 					            END
 					          FROM (SELECT ABS(
@@ -1315,7 +1316,7 @@ VW_Criptografia AS (
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    WHERE (C.POSICAO <= 50)-- not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
+    WHERE not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
 )
 select *
 from VW_CRIPTOGRAFIA

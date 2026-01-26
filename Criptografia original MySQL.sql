@@ -1,13 +1,3 @@
-/*delete from USUARIO_A 
-
-insert into USUARIO_A(ID, SENHA) VALUES(1, 'h')
-insert into USUARIO_A(ID, SENHA) VALUES(1, '0biQz2;y6(FQ2Gc7ANq952YCLIXjaA01234567890biQz2;y6(FQ2Gc7ANq952YCLIXjaA01234567890biQz2;y6(FQ2Gc7ANq952YCLIXjaA0123456789')
-
-select *
-from usuario_a*/
-
--- SET SESSION cte_max_recursion_depth = 10000000000;
-
 WITH RECURSIVE
 VW_Auxiliar AS (
     SELECT 
@@ -28,7 +18,7 @@ VW_Auxiliar AS (
     ) AS numbers
     WHERE n <= CHAR_LENGTH(CHANGED)
 ),
-VW_GetGCD as (
+VW_GetGCD as ( 	-- Calcula MDC entre LINHA e 90 usando algoritmo de Euclides
 	select 
 	    LINHA,
 	    CARACT,
@@ -61,7 +51,7 @@ VW_GetGCD as (
 	    END as gcd_result
 	FROM VW_Auxiliar
 ),
-VW_GetCoprimo as (
+VW_GetCoprimo as (	-- Filtrar apenas números COPRIMOS (relativamente primos) com 90
 	select 
 		LINHA,
 		CARACT,
@@ -83,32 +73,19 @@ VW_Criptografia AS (
         LENGTH(AA.SENHA) AS POS_AUX,
         '!#$%&''()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ\Б' AS ORIGINAL,
         'Üúùø÷öõôóòñðïîíìëêéèçæåäãâáàßÝÛÚÙØ×ÖÕÔÓÒÑÐÏÎÍÌËÊÉÈÇÆÅÄÃÂÁÀ¿¾½¼»º¹¸·¶µ´³²±°¯®Д¬«ª©¨§¦¥¤£¡ГБ' AS CHANGED,
-        CAST('' AS CHAR(500)) AS LEN_BLOCO,
-        CAST('' AS CHAR(500)) AS LEN_SENHA,
         CAST('' AS CHAR(500)) AS BLOCO,
         1 AS COPRIMO,
         0 as COPRIMO_AUX,
-        0 as COPRIMO_AUX_2,
-        0 as COPRIMO_AUX_3,
-        0 as COPRIMO_AUX_4,
         '18,11,12;13,14,15;2,16,17' AS MATRIZ,
         CAST('' as CHAR(500)) AS AUXILIAR,
         CAST('' AS CHAR(500)) AS ANTERIOR,
         0 AS CONTADOR,
         0 as CONTADOR_2,
-        0 AS VIRGULA,
         CAST('' AS CHAR(500)) AS AUX_BLOCO,
         CAST('' AS CHAR(500)) AS BLOCO_ATUAL,
-        0 as ITERACAO_EXTRA,
         CAST('' AS CHAR(500)) AS BLOCO_ANT,        
         0 AS CONT_BLOCOS,
         0 as CONT_BLOCOS_AUX,
-        0 AS DETERMINANTE,
-        '18,11,12;13,14,15;2,16,17' AS MATR_COPRIMO,
-        0 AS GCD,
-        0 AS DIVIDENDO,
-        0 AS DIVISOR,
-        0 AS RESTO,
         1 as LINHA
     FROM USUARIO_A AA
     
@@ -118,14 +95,14 @@ VW_Criptografia AS (
         C.ID,
         C.SENHA,
 
-        case 
+        case 	-- APLICA CIFRA AFIM: E(x) = (18x + 20) mod 90
         	when (C.CHAR_ATUAL <> '') 
         	  and (CHAR_LENGTH(C.CRYPT) <= CHAR_LENGTH(C.SENHA)) then 
         		CONCAT(
                     C.CRYPT,
                     SUBSTRING(
                         C.CHANGED,
-                        CAST(MOD(18 * (INSTR(binary C.ORIGINAL, BINARY C.CHAR_ATUAL) - 1) + 20, ((LENGTH(C.CHANGED) / 2) - 1)) AS UNSIGNED) + 1,
+                        CAST(MOD(18 * (INSTR(binary C.ORIGINAL, BINARY C.CHAR_ATUAL) - 1) + 20, (CHAR_LENGTH(C.CHANGED) - 1)) AS UNSIGNED) + 1,
                         1
                     )
                 ) 
@@ -134,7 +111,7 @@ VW_Criptografia AS (
         	end
         as CRYPT,
         
-       CASE 
+       case	 -- Aplicar permutação (inversão) à string cifrada após a Afim, esta é a CAMADA 2 do sistema de cifra composta
 	        when (CHAR_LENGTH(C.CRYPT) = CHAR_LENGTH(C.SENHA)) THEN
 	          CASE 
 				when (CHAR_LENGTH(C.CRYPT) + CHAR_LENGTH(C.SENHA)) = 2 then 
@@ -156,7 +133,7 @@ VW_Criptografia AS (
 	   		end 
 	   	as DIV_CRYPT,
          
-       case 
+       case	 -- Montar gradualmente o texto cifrado final caractere por caractere a partir do resultado da inversão de ordem (DIV_CRYPT), para cada iteração recursiva adiciona UM caractere de DIV_CRYPT ao ENCRYPTED 
         	when (INSTR(C.BLOCO, ';') = 0) 
         	  AND (((cast(((LENGTH(C.CRYPT) - (LENGTH(REPLACE(C.CRYPT, '¨', '')))) / 2) as unsigned) + LENGTH(REPLACE(C.CRYPT, '¨', ''))) = LENGTH(C.SENHA))
 		      AND (C.POSICAO <= (LENGTH(C.SENHA) * 2) + 2)) THEN 
@@ -165,7 +142,7 @@ VW_Criptografia AS (
         	C.ENCRYPTED
         end as ENCRYPTED,
 
-       COALESCE(case
+       COALESCE(case  -- Determinar qual caractere da senha original está sendo processado em cada iteração recursiva, é o "ponteiro de leitura" que percorre a senha original caractere por caractere 
 			        when (CHAR_LENGTH(C.CRYPT) <= CHAR_LENGTH(C.SENHA)) THEN 
 		        	CASE
 				        when (C.CHAR_ATUAL = '') then
@@ -196,10 +173,7 @@ VW_Criptografia AS (
         C.ORIGINAL,
         C.CHANGED,
         
-        ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) LEN_BLOCO,
-        CHAR_LENGTH(C.SENHA) LEN_SENHA,
-        
-        case 
+        case  -- CONSTRUÇÃO DINÂMICA DE BLOCOS PARA CIFRA DE HILL, converter a string DIV_CRYPT em blocos de 3 índices para a cifra de Hill 
 	        when ((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))) = CHAR_LENGTH(C.SENHA) then
 		        CASE
 			        when (mod(CHAR_LENGTH(C.SENHA) + 2, 3) = 0) then 
@@ -361,7 +335,7 @@ VW_Criptografia AS (
 			coalesce(C.BLOCO, '')
 	 	 end as BLOCO,
         
-	 	 COALESCE(
+	 	 COALESCE(  -- CÁLCULO DO PRÓXIMO COPRIMO, encontrar o próximo número coprimo com 90 quando a matriz atual não é invertível ao módulo 90
 		 	 (case
 	        	when (((((C.CONT_BLOCOS_AUX <> (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', '')))) or (C.BLOCO_ATUAL <> C.BLOCO_ANT))
 	        	  and (C.CONT_BLOCOS_AUX <> C.CONT_BLOCOS))) 
@@ -371,7 +345,7 @@ VW_Criptografia AS (
 	        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
 	        				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
 	        				(case 
-					    	  	when not ((CASE 
+					    	  	when ((CASE 
 									    WHEN ((SELECT 
 									            CASE 
 									                WHEN 90 = 0 THEN ABS(DE.det)
@@ -444,16 +418,14 @@ VW_Criptografia AS (
 	        , 1) as COPRIMO,
          
         COALESCE(C.COPRIMO, 0) as COPRIMO_AUX,
-       
-        COALESCE(C.COPRIMO_AUX, 0) as COPRIMO_AUX_2,
-         
-        COALESCE(C.COPRIMO_AUX_2, 0) as COPRIMO_AUX_3,
-        
-        COALESCE(C.COPRIMO_AUX_3, 0) as COPRIMO_AUX_4,
         
         C.MATRIZ,
         
-        case
+        /* Escolher qual matriz usar na cifra de Hill dinâmica baseado em múltiplos estados e condições 
+         * "Se contador=2 e não invertível, tenta permutação,
+            se ainda não, tenta +I, se ainda não, vai pra reserva,
+            senão multiplica matriz por coprimo, a menos que..." */
+        case   
 		    when (C.CONTADOR = 2) then 
 		    	case
 			    	when (C.CONTADOR_2 = 0) then 
@@ -708,7 +680,7 @@ VW_Criptografia AS (
 			        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
 			        				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
 			        				(case 
-							    	  	when not ((CASE 
+							    	  	when ((CASE 
 											    WHEN ((SELECT 
 											            CASE 
 											                WHEN 90 = 0 THEN ABS(DE.det)
@@ -970,6 +942,10 @@ VW_Criptografia AS (
         	end
         as ANTERIOR,
 
+        /* Decidir quando incrementar o CONTADOR de 0→1→2→3→0 
+         * "Se CONTADOR=2 e já tentou permutação E +I e ambas falharam, então incrementa para 3. 
+		    Senão, se precisa novo coprimo e matriz não invertível, incrementa se menor que 2. 
+		    Senão, mantém." */
         case
 	      when (C.CONTADOR = 2) 
 	          and (coalesce(C.ANTERIOR,'') <> '') 
@@ -1334,7 +1310,7 @@ VW_Criptografia AS (
 		        	end)
 		        , 1) = 1) then
 			 case
-				when not ((CASE 
+				when ((CASE 
 					    WHEN ((SELECT 
 					            CASE 
 					                WHEN 90 = 0 THEN ABS(DE.det)
@@ -1406,8 +1382,6 @@ VW_Criptografia AS (
 			end
 		as CONTADOR_2,
         
-        0 AS VIRGULA,
-        
         case
         	when ((((LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ',', '')))) + (LENGTH(C.BLOCO) - LENGTH(REPLACE(C.BLOCO, ';', ''))))
               = (CHAR_LENGTH(C.SENHA)
@@ -1421,6 +1395,9 @@ VW_Criptografia AS (
             END	
         as AUX_BLOCO,
 
+        /* Aplicar a cifra de Hill: calcular A × v mod m onde A = matriz 3x3, v = bloco de 3 índices, m = tamanho do alfabeto
+         * Para cada linha i da matriz: resultado[i] = (A[i][1]*v[1] + A[i][2]*v[2] + A[i][3]*v[3]) mod m
+         * Formato: "índice1,índice2,índice3Жíndice4,índice5,índice6Ж..." */
         case
 	         when (coalesce(C.BLOCO_ATUAL) <> '') and ((LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ';', ''))) = 0) then
 	         	REPLACE(C.BLOCO_ATUAL, 'Ж', '')
@@ -1560,12 +1537,6 @@ VW_Criptografia AS (
         		C.BLOCO_ATUAL
         	end
         as BLOCO_ATUAL,
-
-	case 
-        when LINHA = 266 and COPRIMO = 1 and CONT_BLOCOS = 0 then 0  -- Primeira passagem
-        when LINHA = 266 and COPRIMO = 1 and CONT_BLOCOS = 0 then 1  -- Segunda passagem  
-        else 0
-    end as ITERACAO_EXTRA,
         
         case 
         	when (coalesce(C.BLOCO_ATUAL,'') <> '') then 
@@ -1590,52 +1561,19 @@ VW_Criptografia AS (
         		C.CONT_BLOCOS
             end
         AS CONT_BLOCOS_AUX,
-      
-        0 as DETERMINANTE,
-           
-        C.MATR_COPRIMO,
-        C.GCD,
-        
-        case 
-        	when (C.DIVIDENDO = 0) then 
-        		(LOCATE(binary C.CHAR_ATUAL,C.ORIGINAL) - 1)
-        	when (C.DIVISOR = 0) then
-        		C.RESTO
-        	else
-        		C.DIVISOR
-            end 
-        as DIVIDENDO,
-        
-        case
-        	when (C.RESTO = 0) then
-        		cast((length(C.CHANGED) / 2) as unsigned)
-        	when (C.DIVIDENDO = 0) then
-        		C.RESTO
-        end DIVISOR,
-        
-        case
-        	when (C.RESTO = 0) then
-        		mod((LOCATE(binary C.CHAR_ATUAL,C.ORIGINAL) - 1), cast((length(C.CHANGED) / 2) as unsigned))
-        	else
-        		RESTO
-        end RESTO,
         
         LINHA + 1 as LINHA
         
     FROM USUARIO_A AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
     WHERE not ((C.CONT_BLOCOS = 0) and (C.CONT_BLOCOS_AUX <> 0)) 
-)
-select *
-from VW_CRIPTOGRAFIA
-
-/*,
+),
 VW_CRIPT_AUX as (
 	SELECT ROW_NUMBER() OVER (PARTITION BY id ORDER BY linha DESC) as RN,
 		ID, SENHA, BLOCO_ATUAL
 	FROM VW_Criptografia
 )
-select ID, SENHA, BLOCO_ATUAL
+select BLOCO_ATUAL
 from VW_CRIPT_AUX
 where RN = 1
-order by ID*/
+order by ID

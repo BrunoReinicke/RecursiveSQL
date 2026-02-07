@@ -90,7 +90,9 @@ VW_Criptografia AS (
         CAST('' AS CHAR(500)) AS COFATORES,
         CAST('' AS CHAR(500)) AS ADJUNTA,
         0 as DETERMINANTE,
-        0 as INV_MODULAR
+        0 as INV_MODULAR,
+        CAST('' as CHAR(500)) as INVERSA,
+        CAST('' as CHAR(500)) as DECIFRADO
     FROM USUARIO_B AA
     
     union all
@@ -131,10 +133,17 @@ VW_Criptografia AS (
         as AUX_BLOCO,
         
         case
-        	when (coalesce(C.AUX_BLOCO,'') <> '') then
+	        when (coalesce(C.INVERSA,'') <> '') then 
+	        	SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', - (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ';', ''))))
+        	when (coalesce(C.AUX_BLOCO,'') <> '') and (coalesce(C.INVERSA,'') = '') then
         		case 
-        			when (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ',', ''))) < 
-        				(2 * (1 + (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ';', ''))))) THEN       		
+	        		when (MOD( 
+		        			((LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ',', '')))
+		        			 + (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ';', ''))))
+		        			 ,3) = 0)
+		        		  or (MOD( 
+			        			 (LENGTH(C.BLOCO_ATUAL) - LENGTH(REPLACE(C.BLOCO_ATUAL, ',', '')))
+			        			 ,2) <> 0) THEN
 		        		CONCAT(C.BLOCO_ATUAL,
 		        			   INSTR(
 								  CONVERT(ORIGINAL USING utf8mb4) COLLATE utf8mb4_bin, 
@@ -284,11 +293,119 @@ VW_Criptografia AS (
 			else 
 				0
 			end 
-		as INV_MODULAR
+		as INV_MODULAR,
 		
+		case 
+			when (COALESCE(C.ADJUNTA,'') <> '') and (coalesce(C.INV_MODULAR,0) <> 0) then 
+				 CONCAT(case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 2), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						';',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', 2), ';', -1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						';',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 2), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', 2), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end,
+						',',
+						case 
+							when (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', -1) as SIGNED) < 0) THEN 
+								CHAR_LENGTH(C.ORIGINAL) + MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))	
+							else
+								MOD((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ADJUNTA, ';', -1), ',', -1) as SIGNED) * C.INV_MODULAR), CHAR_LENGTH(C.ORIGINAL))
+						end
+					)
+			end 
+		as INVERSA,
+		
+		case 
+			when (coalesce(C.INVERSA,'') <> '') then 
+				CONCAT(
+					SUBSTRING(C.ORIGINAL
+							, mod(
+								mod(
+									(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 1), ',', 1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 1), ',', 2), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 2), ',', -1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 1), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', -1) as SIGNED))
+							   	  ,CHAR_LENGTH(C.ORIGINAL)	
+								) + CHAR_LENGTH(C.ORIGINAL)	
+								,CHAR_LENGTH(C.ORIGINAL)
+							  ) + 1
+							 , 1),
+					SUBSTRING(C.ORIGINAL
+							, mod(
+								mod(
+									(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 2), ';', -1), ',', 1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 2), ',', -1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', 2), ';', -1), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', -1) as SIGNED))
+							   	  ,CHAR_LENGTH(C.ORIGINAL)	
+								) + CHAR_LENGTH(C.ORIGINAL)	
+								,CHAR_LENGTH(C.ORIGINAL)
+							  ) + 1
+							 , 1),
+					SUBSTRING(C.ORIGINAL
+							, mod(
+								mod(
+									(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', -1), ',', 1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', -1), ',', 2), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', 2), ',', -1) as SIGNED))
+								  + (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.INVERSA, ';', -1), ',', -1) as SIGNED) * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.BLOCO_ATUAL, ';', 1), ',', -1) as SIGNED))
+							   	  ,CHAR_LENGTH(C.ORIGINAL)	
+								) + CHAR_LENGTH(C.ORIGINAL)	
+								,CHAR_LENGTH(C.ORIGINAL)
+							  ) + 1
+							 , 1)
+					)
+			END
+		as DECIFRADO
+			
 	FROM USUARIO_B AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    where C.LINHA <= 7
+    where C.LINHA <= 8
 )
 SELECT *
 FROM VW_CRIPTOGRAFIA

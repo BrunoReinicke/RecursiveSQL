@@ -113,7 +113,8 @@ VW_Criptografia AS (
        
         COALESCE( 
 		 	 (case
-	        	when (coalesce(C.BLOCO_ANT,'') <> '') and (C.BLOCO_ATUAL <> C.BLOCO_ANT) then
+	        	-- when (coalesce(C.BLOCO_ATUAL,'') <> '') and (C.BLOCO_ATUAL <> C.BLOCO_ANT) then
+			 	 when (C.BLOCO_PREENCHIDO = 'T') and (C.CONT_BLOCOS <> (CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', '')))) then
 	        		case
 	        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
 	        				(select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > 
@@ -294,7 +295,12 @@ VW_Criptografia AS (
 		    END
         as BLOCO_ANT,
         
-		C.CONT_BLOCOS,
+		case
+			when (C.BLOCO_PREENCHIDO = 'T') then
+				(CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', '')))
+			end
+		as CONT_BLOCOS,
+		
 		C.CONT_BLOCOS_AUX, 
 		C.LINHA + 1 LINHA,
 		
@@ -327,8 +333,8 @@ VW_Criptografia AS (
 		            ((cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED)
 		        	  * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
 		        	  - CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED)
-		        	  * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 2), ',', -1) as SIGNED))
-		        	  * -1),  -- cofatores[1][0] 
+		        	  * CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED))
+		        	  * -1), -- cofatores[1][0] 
 		        	',',
 		        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 1) as SIGNED)
 		        	  * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
@@ -499,6 +505,8 @@ VW_Criptografia AS (
 		as INVERSA,
 		
 		case 
+			when (coalesce(C.BLOCO_ATUAL,'') = '') then 
+				C.DECIFRADO
 			when (coalesce(C.INVERSA,'') <> '') and (coalesce(C.COFATORES,'') <> '') and (coalesce(C.ADJUNTA,'') <> '') then  
 				CONCAT(
 					coalesce(C.DECIFRADO,''),
@@ -555,7 +563,7 @@ VW_Criptografia AS (
 			
 	FROM USUARIO_B AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    where C.LINHA <= 17
+    where C.LINHA <= 31
 )
 SELECT *
 FROM VW_CRIPTOGRAFIA

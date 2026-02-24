@@ -94,7 +94,9 @@ VW_Criptografia AS (
         CAST('' as CHAR(500)) as INVERSA,
         CAST('' as CHAR(500)) as DECIFRADO,
         'F' as BLOCO_PREENCHIDO,
-        'F' as CONTADOR_2
+        'F' as CONTADOR_2,
+        CAST('' as CHAR(500)) as DECRYPT,
+        'F' as DECIFROU
     FROM USUARIO_B AA
     
     union all
@@ -338,7 +340,7 @@ VW_Criptografia AS (
 					    THEN 1
 					    ELSE 0
 					END) 
-					 = 1) then 
+					 = 0) then 
 					'GCD INVÁLIDO'
 				else
 					CONCAT(
@@ -511,7 +513,7 @@ VW_Criptografia AS (
 					else
 						 C.CONTADOR
 				END
-        	when /*((CASE 
+        	when ((CASE 
 					    WHEN ((SELECT 
 					            CASE 
 					                WHEN 90 = 0 THEN ABS(DE.det)
@@ -562,7 +564,7 @@ VW_Criptografia AS (
 					    ELSE 0
 					END) 
 					 = 0)
-			   and*/ (C.CONTADOR < 2) 
+			   and (C.CONTADOR < 2) 
 			   and (C.COPRIMO = (select MAX(AA.LINHA) from VW_GetCoprimo AA))
 			   and (C.COPRIMO <> C.COPRIMO_AUX) then
 				C.CONTADOR + 1
@@ -872,8 +874,8 @@ VW_Criptografia AS (
 				C.DECIFRADO
 			when (((C.COPRIMO = (select MAX(AA.LINHA) from VW_GetCoprimo AA)) and (C.COPRIMO <> C.COPRIMO_AUX)) and (C.CONTADOR = 1)) then
 				C.DECIFRADO
-			when (coalesce(C.BLOCO_ATUAL,'') = '') then 
-				replace(C.DECIFRADO, 'Б', '')
+			/*when (coalesce(C.BLOCO_ATUAL,'') = '') then 
+				replace(C.DECIFRADO, 'Б', '')*/
 			when (coalesce(C.INVERSA,'') <> '') and (coalesce(C.COFATORES,'') <> '') and (coalesce(C.ADJUNTA,'') <> '') then  
 				CONCAT(
 					coalesce(C.DECIFRADO,''),
@@ -934,11 +936,36 @@ VW_Criptografia AS (
 			else
 				C.CONTADOR_2
 			end
-		as CONTADOR_2	
+		as CONTADOR_2,
+		
+		/*case 
+			when (CHAR_LENGTH(C.SENHA) = CHAR_LENGTH(C.DECIFRADO)) and (CHAR_LENGTH(C.DECRYPT) <= CHAR_LENGTH(C.SENHA)) then
+				replace(C.DECIFRADO, 'Б', '')
+					
+				CONCAT(
+                    C.CRYPT,
+                    SUBSTRING(
+                        C.CHANGED,
+                        CAST(MOD(18 * (INSTR(binary C.ORIGINAL, BINARY C.CHAR_ATUAL) - 1) + 20, (CHAR_LENGTH(C.CHANGED) - 1)) AS UNSIGNED) + 1,
+                        1
+                    )
+                ) 
+        	else
+        	   C.CRYPT
+        	end
+		as*/ '' as  DECRYPT,
+		
+		case 
+			when (CHAR_LENGTH(C.SENHA) = CHAR_LENGTH(C.DECIFRADO)) then 
+				'T'
+			else 
+				'F'
+			end
+		as DECIFROU
 			
 	FROM USUARIO_B AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    where (C.LINHA <= 452)
+    where (C.LINHA <= 123)
 )
 SELECT *
 FROM VW_CRIPTOGRAFIA

@@ -173,7 +173,7 @@ VW_Criptografia AS (
 											    THEN 1
 											    ELSE 0
 											END) 
-											 = 0) then
+											 = 1) then
 											 case
 							        			when (C.COPRIMO < (select MAX(AA.LINHA) from VW_GetCoprimo AA)) then
 							        			    (select MIN(BB.LINHA) from VW_GetCoprimo BB where BB.LINHA > C.COPRIMO)
@@ -563,9 +563,9 @@ VW_Criptografia AS (
 					    THEN 1
 					    ELSE 0
 					END) 
-					 = 0)
+					 = 1)
 			   and (C.CONTADOR < 2) 
-			   and (C.COPRIMO = (select MAX(AA.LINHA) from VW_GetCoprimo AA))
+			   and ((C.COPRIMO = (select MAX(AA.LINHA) from VW_GetCoprimo AA)) or ((C.COPRIMO = 1) and (C.COPRIMO_AUX > C.COPRIMO)))
 			   and (C.COPRIMO <> C.COPRIMO_AUX) then
 				C.CONTADOR + 1
 			ELSE
@@ -595,7 +595,7 @@ VW_Criptografia AS (
 	        	SUBSTRING_INDEX(C.BLOCO_ATUAL, 'Ж', - (CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
 	        when (((CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, ',', '')))
 	        	 + (CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', ''))))
-	        	 = CHAR_LENGTH(C.SENHA) - 1) 
+	        	 = CHAR_LENGTH(C.SENHA)) 
 	        	 or (C.COPRIMO <> C.COPRIMO_AUX) then
 	        	C.BLOCO_ATUAL
         	when (coalesce(C.AUX_BLOCO,'') <> '') and (coalesce(C.INVERSA,'') = '') then
@@ -965,7 +965,7 @@ VW_Criptografia AS (
 			
 	FROM USUARIO_B AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    where (C.LINHA <= 123)
+    where (C.LINHA <= 248)
 )
 SELECT *
 FROM VW_CRIPTOGRAFIA

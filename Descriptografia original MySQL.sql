@@ -80,7 +80,7 @@ VW_Criptografia AS (
         cast('18,11,12;13,14,15;2,16,17' as CHAR(500)) AS AUXILIAR,
         CAST('' AS CHAR(500)) AS ANTERIOR,
         0 AS CONTADOR,
-        0 as CONTADOR_AUX,
+        0 as CONTADOR_ANT,
         CAST('' AS CHAR(500)) AS AUX_BLOCO,
         CAST('' AS CHAR(500)) AS BLOCO_ATUAL,
         CAST('' AS CHAR(500)) AS BLOCO_ANT,        
@@ -204,10 +204,12 @@ VW_Criptografia AS (
         C.MATRIZ,
         
         case 
+	       when (C.CONTADOR <> C.CONTADOR_ANT) then 
+	       		C.ANTERIOR 
 	       when (C.CONTADOR = 3) then 
 	       		case 
 	       			when (coalesce(C.INVERSA,'') <> '') and (coalesce(C.COFATORES,'') <> '') and (coalesce(C.ADJUNTA,'') <> '') then 
-	       				C.MATRIZ
+	       				C.MATRIZ 
 	       			else 
 	       				'19,12,13;14,15,16;3,17,18'
 	       		end
@@ -368,8 +370,9 @@ VW_Criptografia AS (
 	       	  C.AUXILIAR
            when (C.BLOCO_PREENCHIDO = 'T') and (C.CONT_BLOCOS <> (CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, 'Ж', '')))) THEN
 	          case 
-	        	when (C.COPRIMO >= (select MAX(AA.LINHA) from VW_GetCoprimo AA))	
-		          and ((CASE 
+	        	when (C.COPRIMO >= (select MAX(AA.LINHA) from VW_GetCoprimo AA)) THEN	
+		          case WHEN 
+		          	  ((CASE 
 					    WHEN ((SELECT 
 					            CASE 
 					                WHEN 90 = 0 THEN ABS(DE.det)
@@ -404,14 +407,13 @@ VW_Criptografia AS (
 					                 )
 					               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', 2), ',', -1) as SIGNED) 
 					                * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
-					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)
+					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
 					                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', -1) as SIGNED)
 					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED)
 					                 )
 					               + cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 1), ',', -1) as SIGNED) 
-					               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 1) as SIGNED)
-					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 2), ',', -1) as SIGNED)
-					                 - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
+					               * (cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', -1) as SIGNED)		                 
+					               - cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED)
 					                 * cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.AUXILIAR, ';', -1), ',', 1) as SIGNED) 
 					                 )
 					            ) % 90) as det
@@ -420,30 +422,56 @@ VW_Criptografia AS (
 					    ELSE 0
 					END) 
 					 = 0) then
-			        C.MATRIZ
+			        C.MATRIZ 
 			     else
 			     	C.ANTERIOR
+			   	 end
+			   else
+			   	 C.ANTERIOR
 			   END
         	else
-		        CONCAT(
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', -1) as SIGNED) * C.COPRIMO),
-			        	';',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', -1) as SIGNED) * C.COPRIMO),
-			        	';',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
-			        	',',
-			        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', -1) as SIGNED) * C.COPRIMO)
-			        )
+        		case
+	        		when (C.CONTADOR = 1) and (C.COPRIMO <> C.COPRIMO_AUX) and (C.COPRIMO = 1) then 
+		        		CONCAT(
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 2), ';', -1), ',', -1) as SIGNED),
+					        	';',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', 2), ',', -1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', -1), ',', -1) as SIGNED),
+					        	';',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', 2), ',', -1) as SIGNED),
+					        	',',
+					        	cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.ANTERIOR, ';', 1), ',', -1) as SIGNED)
+					        )
+	        		ELSE
+				        CONCAT(
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 1), ',', -1) as SIGNED) * C.COPRIMO),
+					        	';',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', 2), ';', -1), ',', -1) as SIGNED) * C.COPRIMO),
+					        	';',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', 2), ',', -1) as SIGNED) * C.COPRIMO),
+					        	',',
+					        	(cast(SUBSTRING_INDEX(SUBSTRING_INDEX(C.MATRIZ, ';', -1), ',', -1) as SIGNED) * C.COPRIMO)
+					        )
+			    END
 			END
 	    as AUXILIAR,
         
@@ -573,7 +601,7 @@ VW_Criptografia AS (
         	end
         as CONTADOR,        
         
-        C.CONTADOR_AUX,
+        C.CONTADOR CONTADOR_ANT,
         
         case 
 	        when ((CHAR_LENGTH(C.BLOCO_ATUAL) - CHAR_LENGTH(REPLACE(C.BLOCO_ATUAL, ',', '')))
@@ -965,7 +993,7 @@ VW_Criptografia AS (
 			
 	FROM USUARIO_B AA
     JOIN VW_Criptografia C ON AA.ID = C.ID
-    where (C.LINHA <= 248)
+    where (C.LINHA <= 232)
 )
 SELECT *
 FROM VW_CRIPTOGRAFIA
